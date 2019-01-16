@@ -99,59 +99,6 @@ public:
     ZipArchiveEntry::Ptr CreateEntry(const std::string& fileName);
     
     /**
-     * \brief Gets the comment of the zip archive.
-     *
-     * \return  The comment.
-     */
-    const std::string& GetComment() const;
-    
-    /**
-     * \brief Sets a comment of the zip archive.
-     *
-     * \param comment The comment.
-     */
-    void SetComment(const std::string& comment);
-    
-    /**
-     * \brief Gets a pointer to the zip entry located on the given index.
-     *
-     * \param index Zero-based index of the.
-     *
-     * \return  null if it fails, else the entry.
-     */
-    ZipArchiveEntry::Ptr GetEntry(int index);
-    
-    /**
-     * \brief Gets a const pointer to the zip entry with given file name.
-     *
-     * \param entryName Name of the entry.
-     *
-     * \return  null if it fails, else the entry.
-     */
-    ZipArchiveEntry::Ptr GetEntry(const std::string& entryName);
-    
-    /**
-     * \brief Gets the number of the zip entries in this archive.
-     *
-     * \return  The number of the zip entries in this archive.
-     */
-    size_t GetEntriesCount() const;
-    
-    /**
-     * \brief Removes the entry by the file name.
-     *
-     * \param entryName Name of the entry.
-     */
-    void RemoveEntry(const std::string& entryName);
-    
-    /**
-    * \brief Removes the entry by the index.
-     *
-     * \param index Zero-based index of the.
-     */
-    void RemoveEntry(int index);
-    
-    /**
      * \brief Writes the zip archive content to the stream. It must be seekable.
      *
      * \param stream The stream to write in.

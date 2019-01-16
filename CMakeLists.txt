@@ -27,7 +27,7 @@ set(LIB_FS_FILES
 
 set(LIB_JSON_FILES
         src/lib/json/json.h
-        src/lib/json/Json.h
+        src/lib/json/using/Json.h
         )
 
 set(LIB_ZIP_FILES
@@ -166,7 +166,6 @@ set(LIB_ZIP_FILES
         src/lib/zip/methods/LzmaMethod.h
         src/lib/zip/methods/StoreMethod.h
         src/lib/zip/methods/ZipMethodResolver.h
-        src/lib/zip/Sample/Main.cpp
         src/lib/zip/streams/compression_decoder_stream.h
         src/lib/zip/streams/compression_encoder_stream.h
         src/lib/zip/streams/crc32stream.h

@@ -7,6 +7,6 @@
 
 bool testAll();
 
-int main();
+int main2();
 
 #endif // ScratchWasmRenderer_test_H

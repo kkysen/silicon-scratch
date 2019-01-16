@@ -29,6 +29,6 @@ bool testAll() {
     return _tests.run(std::cout, std::cerr);
 }
 
-int main() {
+int main2() {
     return testAll() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

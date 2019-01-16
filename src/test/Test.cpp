@@ -22,4 +22,11 @@ bool Test::run(const size_t testNum, std::ostream& out, std::ostream& err) const
 }
 
 void Test::printNameAndNumber(size_t testNum, std::ostream& out) const {
-    ou
+    out << "test " << testNum << " (" << name << ")";
+}
+
+void Test::printSuccess(bool succeeded, size_t testNum, std::ostream& out) const {
+    out << (succeeded ? "success" : "failure") << ": ";
+    printNameAndNumber(testNum, out);
+    out << std::endl;
+}

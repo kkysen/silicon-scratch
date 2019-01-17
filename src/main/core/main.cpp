@@ -23,9 +23,10 @@ Json parse(const fs::path& path) {
 }
 
 int main() {
-    ZipArchive::Ptr archive = ZipFile::Open("/mnt/c/Users/Khyber/Downloads/Maze Starter.sb3");
-    for (auto&& entry : archive->entries()) {
-        std::cout << entry->GetName() << std::endl;
+    const auto archive = ZipFile::open("/mnt/c/Users/Khyber/Downloads/Maze Starter.sb3");
+    std::cout << "numEntries: " << archive.entries().size() << std::endl;
+    for (auto& entry : archive) {
+        std::cout << entry->name() << std::endl;
     }
     
     const Json json = parse("/mnt/c/Users/Khyber/Downloads/project.json");

@@ -192,7 +192,7 @@ set(LIB_ZIP_FILES
         src/lib/zip/ZipArchiveEntry.h
         src/lib/zip/ZipFile.cpp
         src/lib/zip/ZipFile.h
-        )
+        src/lib/zip/utils/time_utils.cpp)
 
 set(LIB_FILES
         ${LIB_FS_FILES}
@@ -203,7 +203,7 @@ set(LIB_FILES
 set(MAIN_FILES
         src/main/core/main.cpp
         src/main/core/main.h
-        )
+        src/main/util/cast/iterators.h src/main/util/numbers.h src/main/util/strings.cpp src/main/util/strings.h)
 
 set(SOURCE_FILES
         ${MAIN_FILES}

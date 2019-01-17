@@ -1,151 +1,111 @@
 #include "ZipLocalFileHeader.h"
 #include "ZipCentralDirectoryFileHeader.h"
 
-#include "../streams/serialization.h"
-
 #include <cstring>
 
+#include "src/lib/zip/streams/serialization.h"
+
 namespace detail {
-
-ZipLocalFileHeader::ZipLocalFileHeader()
-{
-  memset(this, 0, sizeof(ZipLocalFileHeaderBase));
-  Signature = SignatureConstant;
-}
-
-void ZipLocalFileHeader::SyncWithCentralDirectoryFileHeader(ZipCentralDirectoryFileHeader& cdfh)
-{
-  VersionNeededToExtract = cdfh.VersionNeededToExtract;
-  GeneralPurposeBitFlag = cdfh.GeneralPurposeBitFlag;
-  CompressionMethod = cdfh.CompressionMethod;
-  LastModificationTime = cdfh.LastModificationTime;
-  LastModificationDate = cdfh.LastModificationDate;
-  Crc32 = cdfh.Crc32;
-  CompressedSize = cdfh.CompressedSize;
-  UncompressedSize = cdfh.UncompressedSize;
-
-  Filename = cdfh.Filename;
-  FilenameLength = static_cast<uint16_t>(Filename.length());
-}
-
-bool ZipLocalFileHeader::Deserialize(std::istream& stream)
-{
-  if (sizeof(ZipLocalFileHeaderBase) == ZipLocalFileHeaderBase::SIZE_IN_BYTES)
-  {
-    deserialize<ZipLocalFileHeaderBase>(stream, *this);
-  }
-  else
-  {
-    deserialize(stream, Signature);
-    deserialize(stream, VersionNeededToExtract);
-    deserialize(stream, GeneralPurposeBitFlag);
-    deserialize(stream, CompressionMethod);
-    deserialize(stream, LastModificationTime);
-    deserialize(stream, LastModificationDate);
-    deserialize(stream, Crc32);
-    deserialize(stream, CompressedSize);
-    deserialize(stream, UncompressedSize);
-    deserialize(stream, FilenameLength);
-    deserialize(stream, ExtraFieldLength);
-  }
-
-  // If there is not any other entry.
-  if (stream.fail() || Signature != SignatureConstant)
-  {
-    stream.clear();
-    stream.seekg(static_cast<std::ios::off_type>(static_cast<std::ios::streamoff>(stream.tellg()) - stream.gcount()), std::ios::beg);
-    return false;
-  }
-
-  deserialize(stream, Filename, FilenameLength);
-
-  if (ExtraFieldLength > 0)
-  {
-    ZipGenericExtraField extraField;
-
-    auto extraFieldEnd = ExtraFieldLength + stream.tellg();
-
-    while (extraField.Deserialize(stream, extraFieldEnd))
-    {
-      ExtraFields.push_back(extraField);
+    
+    ZipLocalFileHeader::ZipLocalFileHeader() : ZipLocalFileHeaderBase({}) {
+        signature = SIGNATURE_CONST;
     }
-
-    // Some archives do not store extra field in the form of tag, size and data tuples.
-    // That may cause the above while cycle exit prior to reaching the extra field end,
-    // which causes wrong data offset returned by ZipArchiveEntry::GetOffsetOfCompressedData().
-    // Seek forcefully to the end of extra field to mitigate that problem.
-    stream.seekg(extraFieldEnd, std::ios::beg);
-  }
-
-  return true;
-}
-
-void ZipLocalFileHeader::Serialize(std::ostream& stream)
-{
-  FilenameLength = static_cast<uint16_t>(Filename.length());
-  ExtraFieldLength = 0;
-
-  for (auto& extraField : ExtraFields)
-  {
-    ExtraFieldLength += static_cast<uint16_t>(ZipGenericExtraField::HEADER_SIZE + extraField.Data.size());
-  }
-
-  if (sizeof(ZipLocalFileHeaderBase) == ZipLocalFileHeaderBase::SIZE_IN_BYTES)
-  {
-    serialize<ZipLocalFileHeaderBase>(stream, *this);
-  }
-  else
-  {
-    serialize(stream, Signature);
-    serialize(stream, VersionNeededToExtract);
-    serialize(stream, GeneralPurposeBitFlag);
-    serialize(stream, CompressionMethod);
-    serialize(stream, LastModificationTime);
-    serialize(stream, LastModificationDate);
-    serialize(stream, Crc32);
-    serialize(stream, CompressedSize);
-    serialize(stream, UncompressedSize);
-    serialize(stream, FilenameLength);
-    serialize(stream, ExtraFieldLength);
-  }
-
-  serialize(stream, Filename);
-
-  if (ExtraFieldLength > 0)
-  {
-    for (auto& extraField : ExtraFields)
-    {
-      extraField.Serialize(stream);
+    
+    void ZipLocalFileHeader::syncWithCentralDirectoryFileHeader(
+            const ZipCentralDirectoryFileHeader& centralDirectoryFileHeader) {
+        const auto& central = centralDirectoryFileHeader;
+        versionNeededToExtract = central.versionNeededToExtract;
+        generalPurposeBitFlag = central.generalPurposeBitFlag;
+        compressionMethod = central.compressionMethod;
+        lastModificationTime = central.lastModificationTime;
+        lastModificationDate = central.lastModificationDate;
+        crc32 = central.crc32;
+        compressedSize = central.compressedSize;
+        unCompressedSize = central.unCompressedSize;
+        
+        fileName = centralDirectoryFileHeader.fileName;
+        fileNameLength = static_cast<u16>(fileName.length());
     }
-  }
-}
-
-void ZipLocalFileHeader::DeserializeAsDataDescriptor(std::istream& stream)
-{
-  uint32_t firstWord;
-  deserialize(stream, firstWord);
-
-  // the signature is optional, if it's missing,
-  // we're starting with crc32
-  if (firstWord != DataDescriptorSignature)
-  {
-    deserialize(stream, Crc32);
-  }
-  else
-  {
-    Crc32 = firstWord;
-  }
-
-  deserialize(stream, CompressedSize);
-  deserialize(stream, UncompressedSize);
-}
-
-void ZipLocalFileHeader::SerializeAsDataDescriptor(std::ostream& stream)
-{
-  serialize(stream, DataDescriptorSignature);
-  serialize(stream, Crc32);
-  serialize(stream, CompressedSize);
-  serialize(stream, UncompressedSize);
-}
-
+    
+    bool ZipLocalFileHeader::deserialize(std::istream& stream) {
+        ::deserialize<ZipLocalFileHeaderBase>(stream, *this);
+        
+        // If there is not any other entry.
+        if (stream.fail() || signature != SIGNATURE_CONST) {
+            stream.clear();
+            const auto offset = static_cast<std::ios::streamoff>(stream.tellg()) - stream.gcount();
+            stream.seekg(static_cast<std::ios::off_type>(offset),std::ios::beg);
+            return false;
+        }
+        
+        ::deserialize(stream, fileName, fileNameLength);
+        
+        if (extraFieldLength > 0) {
+            ZipGenericExtraField extraField;
+            
+            auto extraFieldEnd = extraFieldLength + stream.tellg();
+            
+            while (extraField.deserialize(stream, extraFieldEnd)) {
+                extraFields.push_back(extraField);
+            }
+            
+            // Some archives do not store extra field in the form of tag, size and data tuples.
+            // That may cause the above while cycle exit prior to reaching the extra field end,
+            // which causes wrong data offset returned by ZipArchiveEntry::GetOffsetOfCompressedData().
+            // Seek forcefully to the end of extra field to mitigate that problem.
+            stream.seekg(extraFieldEnd, std::ios::beg);
+        }
+        
+        return true;
+    }
+    
+    void ZipLocalFileHeader::serialize(std::ostream& stream) {
+        fileNameLength = static_cast<u16>(fileName.length());
+        extraFieldLength = 0;
+        
+        for (auto& extraField : extraFields) {
+            extraFieldLength += extraField.size();
+        }
+    
+        ::serialize<ZipLocalFileHeaderBase>(stream, *this);
+        
+        ::serialize(stream, fileName);
+        
+        if (extraFieldLength > 0) {
+            for (auto& extraField : extraFields) {
+                extraField.serialize(stream);
+            }
+        }
+    }
+    
+    void ZipLocalFileHeader::deserializeAsDataDescriptor(std::istream& stream) {
+        u32 firstWord;
+        ::deserialize(stream, firstWord);
+        
+        // the signature is optional, if it's missing,
+        // we're starting with crc32
+        if (firstWord != DATA_DESCRIPTOR_SIGNATURE) {
+            auto _crc32 = crc32;
+            ::deserialize(stream, _crc32);
+            crc32 = _crc32;
+        } else {
+            crc32 = firstWord;
+        }
+        
+        // can't make pointer from packed fields
+        auto _compressedSize = compressedSize;
+        auto _unCompressedSize = unCompressedSize;
+        ::deserialize(stream, _compressedSize);
+        ::deserialize(stream, _unCompressedSize);
+        compressedSize = _compressedSize;
+        unCompressedSize = _unCompressedSize;
+    }
+    
+    void ZipLocalFileHeader::serializeAsDataDescriptor(std::ostream& stream) {
+        ::serialize(stream, DATA_DESCRIPTOR_SIGNATURE);
+        ::serialize(stream, crc32);
+        ::serialize(stream, compressedSize);
+        ::serialize(stream, unCompressedSize);
+    }
+    
 }

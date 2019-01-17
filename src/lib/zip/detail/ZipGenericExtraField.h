@@ -1,27 +1,28 @@
 #pragma once
+
 #include <cstdint>
 #include <vector>
 #include <iostream>
 
+#include "src/main/util/numbers.h"
+
 namespace detail {
-  
-struct ZipGenericExtraField
-{
-  enum : size_t
-  {
-    HEADER_SIZE = 4
-  };
-
-  uint16_t Tag;
-  uint16_t Size;
-  std::vector<uint8_t> Data;
-
-  private:
-    friend struct ZipLocalFileHeader;
-    friend struct ZipCentralDirectoryFileHeader;
-
-    bool Deserialize(std::istream& stream, std::istream::pos_type extraFieldEnd);
-    void Serialize(std::ostream& stream);
-};
-
+    
+    struct ZipGenericExtraField {
+        
+        struct __attribute__((packed)) Header {
+            u16 tag;
+            u16 size;
+        } header;
+        
+        std::vector<u8> data;
+        
+        u16 size() const noexcept;
+        
+        bool deserialize(std::istream& stream, std::istream::pos_type extraFieldEnd);
+        
+        void serialize(std::ostream& stream);
+        
+    };
+    
 }

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ZipGenericExtraField.h"
 
 #include <iostream>
@@ -8,53 +9,43 @@
 class ZipArchiveEntry;
 
 namespace detail {
-
-struct ZipCentralDirectoryFileHeader;
-
-struct ZipLocalFileHeaderBase
-{
-  enum : size_t
-  {
-    SIZE_IN_BYTES = 30
-  };
-
-  uint32_t Signature;
-  uint16_t VersionNeededToExtract;
-  uint16_t GeneralPurposeBitFlag;
-  uint16_t CompressionMethod;
-  uint16_t LastModificationTime;
-  uint16_t LastModificationDate;
-  uint32_t Crc32;
-  uint32_t CompressedSize;
-  uint32_t UncompressedSize;
-  uint16_t FilenameLength;
-  uint16_t ExtraFieldLength;
-};
-
-struct ZipLocalFileHeader
-  : ZipLocalFileHeaderBase
-{
-  enum : uint32_t
-  {
-    SignatureConstant       = 0x04034b50,
-    DataDescriptorSignature = 0x08074b50
-  };
-
-  std::string Filename;
-  std::vector<ZipGenericExtraField> ExtraFields;
-
-  ZipLocalFileHeader();
-
-  private:
-    friend class ::ZipArchiveEntry;
-
-    void SyncWithCentralDirectoryFileHeader(ZipCentralDirectoryFileHeader& cdfh);
-
-    bool Deserialize(std::istream& stream);
-    void Serialize(std::ostream& stream);
-
-    void DeserializeAsDataDescriptor(std::istream& stream);
-    void SerializeAsDataDescriptor(std::ostream& stream);
-};
-
+    
+    struct ZipCentralDirectoryFileHeader;
+    
+    struct __attribute__((packed)) ZipLocalFileHeaderBase {
+        u32 signature;
+        u16 versionNeededToExtract;
+        u16 generalPurposeBitFlag;
+        u16 compressionMethod;
+        u16 lastModificationTime;
+        u16 lastModificationDate;
+        u32 crc32;
+        u32 compressedSize;
+        u32 unCompressedSize;
+        u16 fileNameLength;
+        u16 extraFieldLength;
+    };
+    
+    struct ZipLocalFileHeader: ZipLocalFileHeaderBase {
+        
+        static constexpr u32 SIGNATURE_CONST = 0x04034b50;
+        static constexpr u32 DATA_DESCRIPTOR_SIGNATURE = 0x08074b50;
+        
+        std::string fileName;
+        std::vector<ZipGenericExtraField> extraFields;
+        
+        ZipLocalFileHeader();
+        
+        void syncWithCentralDirectoryFileHeader(const ZipCentralDirectoryFileHeader& centralDirectoryFileHeader);
+        
+        bool deserialize(std::istream& stream);
+        
+        void serialize(std::ostream& stream);
+        
+        void deserializeAsDataDescriptor(std::istream& stream);
+        
+        void serializeAsDataDescriptor(std::ostream& stream);
+        
+    };
+    
 }

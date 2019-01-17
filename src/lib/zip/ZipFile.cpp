@@ -10,7 +10,7 @@
 
 namespace {
     
-    std::string GetFilenameFromPath(const std::string& fullPath) {
+    std::string getFilenameFromPath(const std::string& fullPath) {
         std::string::size_type dirSeparatorPos;
         
         if ((dirSeparatorPos = fullPath.find_last_of('/')) != std::string::npos) {
@@ -20,13 +20,13 @@ namespace {
         }
     }
     
-    std::string MakeTempFilename(const std::string& fileName) {
+    std::string makeTempFilename(const std::string& fileName) {
         return fileName + ".tmp";
     }
     
 }
 
-ZipArchive::Ptr ZipFile::Open(const std::string& zipPath) {
+ZipArchive ZipFile::open(const std::string& zipPath) {
     auto zipFile = std::make_unique<std::ifstream>();
     zipFile->open(zipPath, std::ios::binary);
     
@@ -43,43 +43,12 @@ ZipArchive::Ptr ZipFile::Open(const std::string& zipPath) {
             throw std::runtime_error("cannot open zip file");
         }
     }
-    
-    return ZipArchive::Create(zipFile.release(), true);
-}
-
-void ZipFile::Save(ZipArchive::Ptr zipArchive, const std::string& zipPath) {
-    ZipFile::SaveAndClose(zipArchive, zipPath);
-    
-    zipArchive = ZipFile::Open(zipPath);
-}
-
-void ZipFile::SaveAndClose(ZipArchive::Ptr zipArchive, const std::string& zipPath) {
-    // check if file exist
-    std::string tempZipPath = MakeTempFilename(zipPath);
-    std::ofstream outZipFile;
-    outZipFile.open(tempZipPath, std::ios::binary | std::ios::trunc);
-    
-    if (!outZipFile.is_open()) {
-        throw std::runtime_error("cannot save zip file");
-    }
-    
-    zipArchive->WriteToStream(outZipFile);
-    outZipFile.close();
-    
-    zipArchive->InternalDestroy();
-    
-    remove(zipPath.c_str());
-    rename(tempZipPath.c_str(), zipPath.c_str());
-}
-
-bool ZipFile::IsInArchive(const std::string& zipPath, const std::string& fileName) {
-    ZipArchive::Ptr zipArchive = ZipFile::Open(zipPath);
-    return zipArchive->GetEntry(fileName) != nullptr;
+    return std::move(ZipArchive(zipFile.release(), true));
 }
 
 void ZipFile::AddFile(
         const std::string& zipPath, const std::string& fileName, ICompressionMethod::Ptr method) {
-    AddFile(zipPath, fileName, GetFilenameFromPath(fileName), std::move(method));
+    AddFile(zipPath, fileName, getFilenameFromPath(fileName), std::move(method));
 }
 
 void ZipFile::AddFile(
@@ -92,17 +61,17 @@ void ZipFile::AddEncryptedFile(
         const std::string& zipPath, const std::string& fileName, const std::string& password,
         ICompressionMethod::Ptr method) {
     // not sure why empty string was being passed as the password, so I changed it
-    AddEncryptedFile(zipPath, fileName, GetFilenameFromPath(fileName), password, std::move(method));
+    AddEncryptedFile(zipPath, fileName, getFilenameFromPath(fileName), password, std::move(method));
 //    AddEncryptedFile(zipPath, fileName, GetFilenameFromPath(fileName), std::string(), std::move(method));
 }
 
 void ZipFile::AddEncryptedFile(
         const std::string& zipPath, const std::string& fileName, const std::string& inArchiveName,
         const std::string& password, ICompressionMethod::Ptr method) {
-    std::string tmpName = MakeTempFilename(zipPath);
+    std::string tmpName = makeTempFilename(zipPath);
     
     {
-        ZipArchive::Ptr zipArchive = ZipFile::Open(zipPath);
+        auto zipArchive = ZipFile::open(zipPath);
         
         std::ifstream fileToAdd;
         fileToAdd.open(fileName, std::ios::binary);
@@ -111,20 +80,16 @@ void ZipFile::AddEncryptedFile(
             throw std::runtime_error("cannot open input file");
         }
         
-        auto fileEntry = zipArchive->CreateEntry(inArchiveName);
-        
-        if (fileEntry == nullptr) {
-            //throw std::runtime_error("input file already exist in the archive");
-            zipArchive->RemoveEntry(inArchiveName);
-            fileEntry = zipArchive->CreateEntry(inArchiveName);
-        }
+        auto& fileEntry = zipArchive
+                .entry(inArchiveName)
+                .create(ZipArchive::MaybeEntry::CreateMode::OVERWRITE)
+                .get();
         
         if (!password.empty()) {
-            fileEntry->SetPassword(password);
-            fileEntry->UseDataDescriptor();
+            fileEntry.setPassword(password);
+            fileEntry.useDataDescriptor();
         }
-        
-        fileEntry->SetCompressionStream(fileToAdd, std::move(method));
+        fileEntry.setCompressionStream(fileToAdd, std::move(method));
         
         //////////////////////////////////////////////////////////////////////////
         
@@ -135,7 +100,8 @@ void ZipFile::AddEncryptedFile(
             throw std::runtime_error("cannot open output file");
         }
         
-        zipArchive->WriteToStream(outFile);
+//        outFile << zipArchive;
+        zipArchive.writeTo(outFile);
         outFile.close();
         
         // force closing the input zip stream
@@ -146,7 +112,7 @@ void ZipFile::AddEncryptedFile(
 }
 
 void ZipFile::ExtractFile(const std::string& zipPath, const std::string& fileName) {
-    ExtractFile(zipPath, fileName, GetFilenameFromPath(fileName));
+    ExtractFile(zipPath, fileName, getFilenameFromPath(fileName));
 }
 
 void ZipFile::ExtractFile(
@@ -156,12 +122,12 @@ void ZipFile::ExtractFile(
 
 void ZipFile::ExtractEncryptedFile(
         const std::string& zipPath, const std::string& fileName, const std::string& password) {
-    ExtractEncryptedFile(zipPath, fileName, GetFilenameFromPath(fileName), password);
+    ExtractEncryptedFile(zipPath, fileName, getFilenameFromPath(fileName), password);
 }
 
 void ZipFile::ExtractEncryptedFile(const std::string& zipPath, const std::string& fileName,
                                    const std::string& destinationPath, const std::string& password) {
-    ZipArchive::Ptr zipArchive = ZipFile::Open(zipPath);
+    auto zipArchive = ZipFile::open(zipPath);
     
     std::ofstream destFile;
     destFile.open(destinationPath, std::ios::binary | std::ios::trunc);
@@ -170,18 +136,13 @@ void ZipFile::ExtractEncryptedFile(const std::string& zipPath, const std::string
         throw std::runtime_error("cannot create destination file");
     }
     
-    auto entry = zipArchive->GetEntry(fileName);
-    
-    if (entry == nullptr) {
-        throw std::runtime_error("file is not contained in zip file");
-    }
+    auto& entry = zipArchive.entry(fileName).get();
     
     if (!password.empty()) {
-        entry->SetPassword(password);
+        entry.setPassword(password);
     }
     
-    std::istream* dataStream = entry->GetDecompressionStream();
-    
+    std::istream* dataStream = entry.decompressionStream();
     if (dataStream == nullptr) {
         throw std::runtime_error("wrong password");
     }
@@ -190,31 +151,4 @@ void ZipFile::ExtractEncryptedFile(const std::string& zipPath, const std::string
     
     destFile.flush();
     destFile.close();
-}
-
-void ZipFile::RemoveEntry(const std::string& zipPath, const std::string& fileName) {
-    std::string tmpName = MakeTempFilename(zipPath);
-    
-    {
-        ZipArchive::Ptr zipArchive = ZipFile::Open(zipPath);
-        zipArchive->RemoveEntry(fileName);
-        
-        //////////////////////////////////////////////////////////////////////////
-        
-        std::ofstream outFile;
-        
-        outFile.open(tmpName, std::ios::binary);
-        
-        if (!outFile.is_open()) {
-            throw std::runtime_error("cannot open output file");
-        }
-        
-        zipArchive->WriteToStream(outFile);
-        outFile.close();
-        
-        // force closing the input zip stream
-    }
-    
-    remove(zipPath.c_str());
-    rename(tmpName.c_str(), zipPath.c_str());
 }

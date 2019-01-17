@@ -22,20 +22,14 @@ class ZipArchive;
 /**
  * \brief Represents a compressed file within a zip archive.
  */
-class ZipArchiveEntry
-        : public std::enable_shared_from_this<ZipArchiveEntry> {
-    
-    friend class ZipFile;
+class ZipArchiveEntry: public std::enable_shared_from_this<ZipArchiveEntry> {
     
     friend class ZipArchive;
 
 public:
     
-    typedef std::shared_ptr<ZipArchiveEntry> Ptr;
+    using Ptr = std::shared_ptr<ZipArchiveEntry>;
     
-    /**
-     * \brief Values that represent the way the zip entry will be compressed.
-     */
     enum class CompressionMode {
         Immediate,
         Deferred
@@ -44,7 +38,7 @@ public:
     /**
      * \brief Values that represent the MS-DOS file attributes.
      */
-    enum class Attributes : uint32_t {
+    enum class Attributes : u32 {
         None = 0,
         ReadOnly = 1,
         Hidden = 2,
@@ -62,7 +56,7 @@ public:
     MARK_AS_TYPED_ENUMFLAGS_FRIEND(Attributes);
     
     MARK_AS_TYPED_ENUMFLAGS_FRIEND(CompressionMode);
-    
+
 private:
     
     ZipArchive* _archive = nullptr;           //< pointer to the owning zip archive
@@ -106,21 +100,21 @@ public:
      *
      * \return  The full name with the path.
      */
-    const std::string& GetFullName() const;
+    const std::string& fullName() const;
     
     /**
      * \brief Sets full name with the path of the entry.
      *
      * \param fullName The full name with the path.
      */
-    void SetFullName(const std::string& fullName);
+    void setFullName(const std::string& fullName);
     
     /**
      * \brief Gets only the file name of the entry (without path).
      *
      * \return  The file name.
      */
-    const std::string& GetName() const;
+    const std::string& name() const;
     
     /**
      * \brief Sets only a file name of the entry.
@@ -128,70 +122,70 @@ public:
      *
      * \param name  The file name.
      */
-    void SetName(const std::string& name);
+    void setName(const std::string& name);
     
     /**
      * \brief Gets the comment of this zip entry.
      *
      * \return  The comment.
      */
-    const std::string& GetComment() const;
+    const std::string& comment() const;
     
     /**
      * \brief Sets a comment of this zip entry.
      *
      * \param comment The comment.
      */
-    void SetComment(const std::string& comment);
+    void setComment(const std::string& comment);
     
     /**
      * \brief Gets the time the file was last modified.
      *
      * \return  The last write time.
      */
-    time_t GetLastWriteTime() const;
+    time_t lastWriteTime() const;
     
     /**
      * \brief Sets the time the file was last modified.
      *
      * \param modTime Time of the modifier.
      */
-    void SetLastWriteTime(time_t modTime);
+    void setLastWriteTime(time_t modTime);
     
     /**
      * \brief Gets the file attributes of this zip entry.
      *
      * \return  The file attributes.
      */
-    Attributes GetAttributes() const;
+    Attributes attributes() const;
     
     /**
      * \brief Gets the compression method.
      *
      * \return  The compression method.
      */
-    uint16_t GetCompressionMethod() const;
+    u16 compressionMethod() const;
     
     /**
      * \brief Sets the file attributes of this zip entry.
      *
      * \param value The file attributes.
      */
-    void SetAttributes(Attributes value);
+    void setAttributes(Attributes value);
     
     /**
      * \brief Query if this entry is password protected.
      *
      * \return  true if password protected, false if not.
      */
-    bool IsPasswordProtected() const;
+    bool isPasswordProtected() const;
     
     /**
      * \brief Gets the password of the zip entry. If the password is empty string, the password is not set.
      *
      * \return  The password.
      */
-    const std::string& GetPassword() const;
+    const std::string& password() const;
     
     /**
      * \brief Sets a password of the zip entry. If the password is empty string, the password is not set.
@@ -199,28 +193,28 @@ public:
      *
      * \param password  The password.
      */
-    void SetPassword(const std::string& password);
+    void setPassword(const std::string& password);
     
     /**
      * \brief Gets CRC 32 of the file.
      *
      * \return  The CRC 32.
      */
-    uint32_t GetCrc32() const;
+    u32 crc32() const;
     
     /**
      * \brief Gets the size of the uncompressed data.
      *
      * \return  The size.
      */
-    size_t GetSize() const;
+    size_t size() const;
     
     /**
      * \brief Gets the size of compressed data.
      *
      * \return  The compressed size.
      */
-    size_t GetCompressedSize() const;
+    size_t compressedSize() const;
     
     /**
      * \brief Determine if we can extract the entry.
@@ -228,14 +222,14 @@ public:
      *
      * \return  true if we can extract, false if not.
      */
-    bool CanExtract() const;
+    bool canExtract() const;
     
     /**
      * \brief Query if this entry is a directory.
      *
      * \return  true if directory, false if not.
      */
-    bool IsDirectory() const;
+    bool isDirectory() const;
     
     /**
      * \brief Query if this object is using data descriptor.
@@ -248,7 +242,7 @@ public:
      *
      * \return  true if using data descriptor, false if not.
      */
-    bool IsUsingDataDescriptor() const;
+    bool isUsingDataDescriptor() const;
     
     /**
      * \brief Use data descriptor.
@@ -260,7 +254,7 @@ public:
      *        actual CRC32 before proceeding.
      * \param use (Optional) If true, use the data descriptor, false to not use.
      */
-    void UseDataDescriptor(bool use = true);
+    void useDataDescriptor(bool use = true);
     
     
     /**
@@ -281,20 +275,20 @@ public:
      *
      * \return  true if it succeeds, false if it fails.
      */
-    bool SetCompressionStream(std::istream& stream, ICompressionMethod::Ptr method = DeflateMethod::Create(),
+    bool setCompressionStream(std::istream& stream, ICompressionMethod::Ptr method = DeflateMethod::Create(),
                               CompressionMode mode = CompressionMode::Deferred);
     
     /**
      * \brief Sets compression stream to be null and unsets the password. The entry would contain no data with zero size.
      */
-    void UnsetCompressionStream();
+    void unSetCompressionStream();
     
     /**
      * \brief Gets raw stream of the compressed data.
      *
      * \return  null if it fails, else the stream of raw data.
      */
-    std::istream* GetRawStream();
+    std::istream* rawStream();
     
     /**
      * \brief Gets decompression stream.
@@ -302,46 +296,46 @@ public:
      *
      * \return  null if it fails, else the decompression stream.
      */
-    std::istream* GetDecompressionStream();
+    std::istream* decompressionStream();
     
     /**
      * \brief Query if the GetRawStream method has been already called.
      *
      * \return  true if the raw stream is opened, false if not.
      */
-    bool IsRawStreamOpened() const;
+    bool isRawStreamOpened() const;
     
     /**
      * \brief Query if the GetDecompressionStream method has been already called.
      *
      * \return  true if the decompression stream is opened, false if not.
      */
-    bool IsDecompressionStreamOpened() const;
+    bool isDecompressionStreamOpened() const;
     
     /**
      * \brief Closes the raw stream, opened by GetRawStream.
      */
-    void CloseRawStream();
+    void closeRawStream();
     
     /**
      * \brief Closes the decompression stream, opened by GetDecompressionStream.
      */
-    void CloseDecompressionStream();
+    void closeDecompressionStream();
     
     /**
      * \brief Removes this entry from the ZipArchive.
      */
-    void Remove();
+    void remove();
 
 private:
     
-    static const uint16_t VERSION_MADE_BY_DEFAULT = 63;
+    static constexpr u16 VERSION_MADE_BY_DEFAULT = 63;
     
-    static const uint16_t VERSION_NEEDED_DEFAULT = 10;
-    static const uint16_t VERSION_NEEDED_EXPLICIT_DIRECTORY = 20;
-    static const uint16_t VERSION_NEEDED_ZIP64 = 45;
+    static constexpr u16 VERSION_NEEDED_DEFAULT = 10;
+    static constexpr u16 VERSION_NEEDED_EXPLICIT_DIRECTORY = 20;
+    static constexpr u16 VERSION_NEEDED_ZIP64 = 45;
     
-    enum class BitFlag : uint16_t {
+    enum class BitFlag : u16 {
         None = 0,
         Encrypted = 1,
         DataDescriptor = 8,
@@ -362,51 +356,51 @@ private:
     static ZipArchiveEntry::Ptr CreateExisting(ZipArchive* zipArchive, detail::ZipCentralDirectoryFileHeader& cd);
     
     // methods
-    void SetCompressionMethod(uint16_t value);
+    void setCompressionMethod(u16 value);
     
-    BitFlag GetGeneralPurposeBitFlag() const;
+    BitFlag generalPurposeBitFlag() const;
     
-    void SetGeneralPurposeBitFlag(BitFlag value, bool set = true);
+    void setGeneralPurposeBitFlag(BitFlag value, bool set = true);
     
-    uint16_t GetVersionToExtract() const;
+    u16 versionToExtract() const;
     
-    void SetVersionToExtract(uint16_t value);
+    void setVersionToExtract(u16 value);
     
-    uint16_t GetVersionMadeBy() const;
+    u16 versionMadeBy() const;
     
-    void SetVersionMadeBy(uint16_t value);
+    void setVersionMadeBy(u16 value);
     
-    int32_t GetOffsetOfLocalHeader() const;
+    i32 offsetOfLocalHeader() const;
     
-    void SetOffsetOfLocalHeader(int32_t value);
+    void setOffsetOfLocalHeader(i32 value);
     
-    bool HasCompressionStream() const;
+    bool hasCompressionStream() const;
     
-    void FetchLocalFileHeader();
+    void fetchLocalFileHeader();
     
-    void CheckFilenameCorrection();
+    void checkFilenameCorrection();
     
-    void FixVersionToExtractAtLeast(uint16_t value);
+    void fixVersionToExtractAtLeast(u16 value);
     
-    void SyncLFH_with_CDFH();
+    void syncLFH_with_CDFH();
     
-    void SyncCDFH_with_LFH();
+    void syncCDFH_with_LFH();
     
-    std::ios::pos_type GetOffsetOfCompressedData();
+    std::ios::pos_type offsetOfCompressedData();
     
-    std::ios::pos_type SeekToCompressedData();
+    std::ios::pos_type seekToCompressedData();
     
-    void SerializeLocalFileHeader(std::ostream& stream);
+    void serializeLocalFileHeader(std::ostream& stream);
     
-    void SerializeCentralDirectoryFileHeader(std::ostream& stream);
+    void serializeCentralDirectoryFileHeader(std::ostream& stream);
     
-    void UnloadCompressionData();
+    void unloadCompressionData();
     
-    void InternalCompressStream(std::istream& inputStream, std::ostream& outputStream);
+    void internalCompressStream(std::istream& inputStream, std::ostream& outputStream);
     
     // for encryption
-    void FigureCrc32();
+    void figureCrc32();
     
-    uint8_t GetLastByteOfEncryptionHeader();
+    u8 lastByteOfEncryptionHeader();
     
 };

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ZipGenericExtraField.h"
 
 #include <iostream>
@@ -6,61 +7,52 @@
 #include <vector>
 #include <cstdint>
 
+#include "src/main/util/numbers.h"
+
 class ZipArchive;
+
 class ZipArchiveEntry;
 
 namespace detail {
-
-struct ZipLocalFileHeader;
-
-struct ZipCentralDirectoryFileHeaderBase
-{
-  enum : size_t
-  {
-    SIZE_IN_BYTES = 46
-  };
-
-  uint32_t Signature;
-  uint16_t VersionMadeBy;
-  uint16_t VersionNeededToExtract;
-  uint16_t GeneralPurposeBitFlag;
-  uint16_t CompressionMethod;
-  uint16_t LastModificationTime;
-  uint16_t LastModificationDate;
-  uint32_t Crc32;
-  uint32_t CompressedSize;
-  uint32_t UncompressedSize;
-  uint16_t FilenameLength;
-  uint16_t ExtraFieldLength;
-  uint16_t FileCommentLength;
-  uint16_t DiskNumberStart;
-  uint16_t InternalFileAttributes;
-  uint32_t ExternalFileAttributes;
-   int32_t RelativeOffsetOfLocalHeader;
-};
-
-struct ZipCentralDirectoryFileHeader
-  : ZipCentralDirectoryFileHeaderBase
-{
-  enum : uint32_t
-  {
-    SignatureConstant = 0x02014b50
-  };
-
-  std::string Filename;
-  std::vector<ZipGenericExtraField> ExtraFields;
-  std::string FileComment;
-
-  ZipCentralDirectoryFileHeader();
-
-  private:
-    friend class ::ZipArchive;
-    friend class ::ZipArchiveEntry;
-
-    void SyncWithLocalFileHeader(ZipLocalFileHeader& lfh);
-
-    bool Deserialize(std::istream& stream);
-    void Serialize(std::ostream& stream);
-};
-
+    
+    struct ZipLocalFileHeader;
+    
+    struct __attribute__((packed)) ZipCentralDirectoryFileHeaderBase {
+        u32 signature;
+        u16 versionMadeBy;
+        u16 versionNeededToExtract;
+        u16 generalPurposeBitFlag;
+        u16 compressionMethod;
+        u16 lastModificationTime;
+        u16 lastModificationDate;
+        u32 crc32;
+        u32 compressedSize;
+        u32 unCompressedSize;
+        u16 fileNameLength;
+        u16 extraFieldLength;
+        u16 fileCommentLength;
+        u16 diskNumberStart;
+        u16 internalFileAttributes;
+        u32 externalFileAttributes;
+        i32 relativeOffsetOfLocalHeader;
+    };
+    
+    struct ZipCentralDirectoryFileHeader: ZipCentralDirectoryFileHeaderBase {
+        
+        static constexpr u32 SIGNATURE_CONSTANT = 0x02014b50;
+        
+        std::string fileName;
+        std::vector<ZipGenericExtraField> extraFields;
+        std::string fileComment;
+        
+        ZipCentralDirectoryFileHeader();
+        
+        void syncWithLocalFileHeader(const ZipLocalFileHeader& localFileHeader);
+        
+        bool deserialize(std::istream& stream);
+        
+        void serialize(std::ostream& stream);
+        
+    };
+    
 }

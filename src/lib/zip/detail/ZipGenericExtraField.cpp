@@ -1,35 +1,34 @@
 #include "ZipGenericExtraField.h"
-#include "../streams/serialization.h"
+
+#include "src/lib/zip/streams/serialization.h"
 
 namespace detail {
-
-bool ZipGenericExtraField::Deserialize(std::istream& stream, std::istream::pos_type extraFieldEnd)
-{
-  if ((extraFieldEnd - stream.tellg()) < static_cast<std::istream::pos_type>(HEADER_SIZE))
-  {
-    return false;
-  }
-
-  deserialize(stream, Tag);
-  deserialize(stream, Size);
-
-  if ((extraFieldEnd - stream.tellg()) < Size)
-  {
-    return false;
-  }
-
-  deserialize(stream, Data, Size);
-
-  return true;
-}
-
-void ZipGenericExtraField::Serialize(std::ostream& stream)
-{
-  Size = static_cast<uint16_t>(Data.size());
-
-  serialize(stream, Tag);
-  serialize(stream, Size);
-  serialize(stream, Data);
-}
-
+    
+    u16 ZipGenericExtraField::size() const noexcept {
+        return sizeof(header) + data.size();
+    }
+    
+    bool ZipGenericExtraField::deserialize(std::istream& stream, std::istream::pos_type extraFieldEnd) {
+        if ((extraFieldEnd - stream.tellg()) < static_cast<std::istream::pos_type>(sizeof(header))) {
+            return false;
+        }
+        
+        // TODO are the :: supposed to be there?
+        ::deserialize(stream, header);
+        
+        if ((extraFieldEnd - stream.tellg()) < header.size) {
+            return false;
+        }
+        
+        ::deserialize(stream, data, header.size);
+        
+        return true;
+    }
+    
+    void ZipGenericExtraField::serialize(std::ostream& stream) {
+        header.size = static_cast<u16>(data.size());
+        ::serialize(stream, header);
+        ::serialize(stream, data);
+    }
+    
 }

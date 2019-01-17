@@ -1,48 +1,40 @@
 #pragma once
+
 #include <cstdint>
 #include <string>
 #include <iostream>
 
+#include "src/main/util/numbers.h"
+
 class ZipArchive;
+
 class ZipArchiveEntry;
 
 namespace detail {
-
-struct EndOfCentralDirectoryBlockBase
-{
-  enum : size_t
-  {
-    SIZE_IN_BYTES = 22
-  };
-
-  uint32_t Signature;
-  uint16_t NumberOfThisDisk;
-  uint16_t NumberOfTheDiskWithTheStartOfTheCentralDirectory;
-  uint16_t NumberOfEntriesInTheCentralDirectoryOnThisDisk;
-  uint16_t NumberOfEntriesInTheCentralDirectory;
-  uint32_t SizeOfCentralDirectory;
-  uint32_t OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber;
-  uint16_t CommentLength;
-};
-
-struct EndOfCentralDirectoryBlock
-  : EndOfCentralDirectoryBlockBase
-{
-  enum : uint32_t
-  {
-    SignatureConstant = 0x06054b50
-  };
-
-  std::string Comment;
-
-  EndOfCentralDirectoryBlock();
-
-  private:
-    friend class ::ZipArchive;
-    friend class ::ZipArchiveEntry;
-
-    bool Deserialize(std::istream& stream);
-    void Serialize(std::ostream& stream);
-};
-
+    
+    struct __attribute__((packed)) EndOfCentralDirectoryBlockBase {
+        u32 signature;
+        u16 diskNumber;
+        u16 startOfCentralDirectoryDiskNum;
+        u16 numberEntriesInDiskCentralDirectory;
+        u16 numberEntriesInCentralDirectory;
+        u32 centralDirectorySize;
+        u32 offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber;
+        u16 commentLength;
+    };
+    
+    struct EndOfCentralDirectoryBlock : EndOfCentralDirectoryBlockBase {
+        
+        static constexpr u32 SIGNATURE_CONST = 0x06054b50;
+        
+        std::string comment;
+        
+        EndOfCentralDirectoryBlock();
+        
+        bool deserialize(std::istream& stream);
+        
+        void serialize(std::ostream& stream);
+        
+    };
+    
 }

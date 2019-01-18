@@ -12,7 +12,8 @@ namespace detail {
     
     struct ZipCentralDirectoryFileHeader;
     
-    struct __attribute__((packed)) ZipLocalFileHeaderBase {
+    struct ZipLocalFileHeaderBase {
+        
         u32 signature;
         u16 versionNeededToExtract;
         u16 generalPurposeBitFlag;
@@ -24,6 +25,11 @@ namespace detail {
         u32 unCompressedSize;
         u16 fileNameLength;
         u16 extraFieldLength;
+        
+        void deserializeBase(std::istream& stream);
+        
+        void serializeBase(std::ostream& stream);
+        
     };
     
     struct ZipLocalFileHeader: ZipLocalFileHeaderBase {

@@ -32,7 +32,7 @@ public:
      * \param zipArchive  The zip archive to save.
      * \param zipPath     Full pathname of the zip archive file.
      */
-    static void Save(ZipArchive::Ptr zipArchive, const std::string& zipPath);
+    static void Save(ZipArchive& zipArchive, const std::string& zipPath);
     
     /**
      * \brief Saves the zip archive file and close it.
@@ -41,7 +41,7 @@ public:
      * \param zipArchive  The zip archive to save.
      * \param zipPath     Full pathname of the zip archive file.
      */
-    static void SaveAndClose(ZipArchive::Ptr zipArchive, const std::string& zipPath);
+    static void SaveAndClose(ZipArchive& zipArchive, const std::string& zipPath);
     
     /**
      * \brief Checks if file with the given path is contained in the archive.

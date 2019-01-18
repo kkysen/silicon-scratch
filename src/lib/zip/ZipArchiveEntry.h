@@ -22,13 +22,11 @@ class ZipArchive;
 /**
  * \brief Represents a compressed file within a zip archive.
  */
-class ZipArchiveEntry: public std::enable_shared_from_this<ZipArchiveEntry> {
+class ZipArchiveEntry : public std::enable_shared_from_this<ZipArchiveEntry> {
     
     friend class ZipArchive;
 
 public:
-    
-    using Ptr = std::shared_ptr<ZipArchiveEntry>;
     
     enum class CompressionMode {
         Immediate,
@@ -59,32 +57,42 @@ public:
 
 private:
     
-    ZipArchive* _archive = nullptr;           //< pointer to the owning zip archive
+    ZipArchive& archive;           //< pointer to the owning zip archive
     
     std::shared_ptr<std::istream> _rawStream = nullptr;         //< stream of raw compressed data
-    std::shared_ptr<std::istream> _compressionStream = nullptr; //< stream of uncompressed data
-    std::shared_ptr<std::istream> _encryptionStream = nullptr;  //< underlying encryption stream
-    std::shared_ptr<std::istream> _archiveStream = nullptr;     //< substream of owning zip archive file
+    std::shared_ptr<std::istream> compressionStream = nullptr; //< stream of uncompressed data
+    std::shared_ptr<std::istream> encryptionStream = nullptr;  //< underlying encryption stream
+    std::shared_ptr<std::istream> archiveStream = nullptr;     //< substream of owning zip archive file
     
     // internal compression data
-    std::shared_ptr<std::iostream> _immediateBuffer;   //< stream used in the immediate mode, stores compressed data in memory
-    std::istream* _inputStream = nullptr;       //< input stream
+    std::shared_ptr<std::iostream> immediateBuffer;   //< stream used in the immediate mode, stores compressed data in memory
+    std::istream* inputStream = nullptr;       //< input stream
     
     ICompressionMethod::Ptr _compressionMethod; //< compression method
-    CompressionMode _compressionMode;   //< compression mode, either deferred or immediate
+    CompressionMode _compressionMode = CompressionMode::Immediate;   //< compression mode, either deferred or immediate
     
     std::string _name;
     
     // TODO: make as flags
-    bool _originallyInArchive = false;
-    bool _isNewOrChanged = false;
-    bool _hasLocalFileHeader = false;
+    bool originallyInArchive = false;
+    bool isNewOrChanged = false;
+    bool hasLocalFileHeader = false;
     
-    detail::ZipLocalFileHeader _localFileHeader;
-    detail::ZipCentralDirectoryFileHeader _centralDirectoryFileHeader;
+    using Local = detail::ZipLocalFileHeader;
+    using Central = detail::ZipCentralDirectoryFileHeader;
     
-    std::ios::pos_type _offsetOfCompressedData = -1;
-    std::ios::pos_type _offsetOfSerializedLocalFileHeader = -1;
+    struct {
+        Local local;
+        Central central;
+    } fileHeader;
+    
+    struct {
+        std::ios::pos_type compressedData;
+        std::ios::pos_type serializedLocalFileHeader;
+    } offset = {
+            .compressedData = -1,
+            .serializedLocalFileHeader = -1,
+    };
     
     std::string _password;
 
@@ -100,21 +108,21 @@ public:
      *
      * \return  The full name with the path.
      */
-    const std::string& fullName() const;
+    std::string_view fullName() const noexcept;
     
     /**
      * \brief Sets full name with the path of the entry.
      *
      * \param fullName The full name with the path.
      */
-    void setFullName(const std::string& fullName);
+    void setFullName(std::string_view fullName);
     
     /**
      * \brief Gets only the file name of the entry (without path).
      *
      * \return  The file name.
      */
-    const std::string& name() const;
+    std::string_view name() const noexcept;
     
     /**
      * \brief Sets only a file name of the entry.
@@ -122,49 +130,42 @@ public:
      *
      * \param name  The file name.
      */
-    void setName(const std::string& name);
+    void setName(std::string_view name);
     
     /**
      * \brief Gets the comment of this zip entry.
      *
      * \return  The comment.
      */
-    const std::string& comment() const;
+    std::string_view comment() const noexcept;
     
     /**
      * \brief Sets a comment of this zip entry.
      *
      * \param comment The comment.
      */
-    void setComment(const std::string& comment);
+    void setComment(std::string_view comment);
     
     /**
      * \brief Gets the time the file was last modified.
      *
      * \return  The last write time.
      */
-    time_t lastWriteTime() const;
+    time_t lastWriteTime() const noexcept;
     
     /**
      * \brief Sets the time the file was last modified.
      *
      * \param modTime Time of the modifier.
      */
-    void setLastWriteTime(time_t modTime);
+    void setLastWriteTime(time_t modTime) noexcept;
     
     /**
      * \brief Gets the file attributes of this zip entry.
      *
      * \return  The file attributes.
      */
-    Attributes attributes() const;
-    
-    /**
-     * \brief Gets the compression method.
-     *
-     * \return  The compression method.
-     */
-    u16 compressionMethod() const;
+    Attributes attributes() const noexcept;
     
     /**
      * \brief Sets the file attributes of this zip entry.
@@ -174,18 +175,31 @@ public:
     void setAttributes(Attributes value);
     
     /**
+     * \brief Gets the compression method.
+     *
+     * \return  The compression method.
+     */
+    const u16& compressionMethod() const noexcept;
+
+private:
+    
+    u16& compressionMethod() noexcept;
+
+public:
+    
+    /**
      * \brief Query if this entry is password protected.
      *
      * \return  true if password protected, false if not.
      */
-    bool isPasswordProtected() const;
+    bool isPasswordProtected() const noexcept;
     
     /**
      * \brief Gets the password of the zip entry. If the password is empty string, the password is not set.
      *
      * \return  The password.
      */
-    const std::string& password() const;
+    std::string_view password() const noexcept;
     
     /**
      * \brief Sets a password of the zip entry. If the password is empty string, the password is not set.
@@ -193,28 +207,28 @@ public:
      *
      * \param password  The password.
      */
-    void setPassword(const std::string& password);
+    void setPassword(std::string_view password);
     
     /**
      * \brief Gets CRC 32 of the file.
      *
      * \return  The CRC 32.
      */
-    u32 crc32() const;
+    u32 crc32() const noexcept;
     
     /**
      * \brief Gets the size of the uncompressed data.
      *
      * \return  The size.
      */
-    size_t size() const;
+    size_t size() const noexcept;
     
     /**
      * \brief Gets the size of compressed data.
      *
      * \return  The compressed size.
      */
-    size_t compressedSize() const;
+    size_t compressedSize() const noexcept;
     
     /**
      * \brief Determine if we can extract the entry.
@@ -222,14 +236,14 @@ public:
      *
      * \return  true if we can extract, false if not.
      */
-    bool canExtract() const;
+    bool canExtract() const noexcept;
     
     /**
      * \brief Query if this entry is a directory.
      *
      * \return  true if directory, false if not.
      */
-    bool isDirectory() const;
+    bool isDirectory() const noexcept;
     
     /**
      * \brief Query if this object is using data descriptor.
@@ -242,7 +256,7 @@ public:
      *
      * \return  true if using data descriptor, false if not.
      */
-    bool isUsingDataDescriptor() const;
+    bool isUsingDataDescriptor() const noexcept;
     
     /**
      * \brief Use data descriptor.
@@ -254,8 +268,7 @@ public:
      *        actual CRC32 before proceeding.
      * \param use (Optional) If true, use the data descriptor, false to not use.
      */
-    void useDataDescriptor(bool use = true);
-    
+    void useDataDescriptor(bool use = true) noexcept;
     
     /**
      * \brief Sets the input stream to fetch the data to compress from.
@@ -267,7 +280,7 @@ public:
      *                The stream instance must exist when the ZipArchive::WriteToStream method is called.
      *                The advantage of deferred compression mode is the compressed data needs not to be loaded
      *                into the memory, because they are streamed into the final output stream.
-     *                
+     *
      *                If immediate mode is chosen, the data are compressed immediately into the memory buffer.
      *                It is not recommended to use this method for large files.
      *                The advantage of immediate mode is the input stream can be destroyed (i.e. by scope)
@@ -303,14 +316,14 @@ public:
      *
      * \return  true if the raw stream is opened, false if not.
      */
-    bool isRawStreamOpened() const;
+    bool isRawStreamOpened() const noexcept;
     
     /**
      * \brief Query if the GetDecompressionStream method has been already called.
      *
      * \return  true if the decompression stream is opened, false if not.
      */
-    bool isDecompressionStreamOpened() const;
+    bool isDecompressionStreamOpened() const noexcept;
     
     /**
      * \brief Closes the raw stream, opened by GetRawStream.
@@ -330,61 +343,57 @@ public:
 private:
     
     static constexpr u16 VERSION_MADE_BY_DEFAULT = 63;
-    
     static constexpr u16 VERSION_NEEDED_DEFAULT = 10;
     static constexpr u16 VERSION_NEEDED_EXPLICIT_DIRECTORY = 20;
+    
     static constexpr u16 VERSION_NEEDED_ZIP64 = 45;
     
     enum class BitFlag : u16 {
-        None = 0,
-        Encrypted = 1,
-        DataDescriptor = 8,
-        UnicodeFileName = 0x800
+        None = 1 << 0,
+        Encrypted = 1 << 1,
+        DataDescriptor = 1 << 3,
+        UnicodeFileName = 1 << 11,
     };
     
     MARK_AS_TYPED_ENUMFLAGS_FRIEND(BitFlag);
     
-    ZipArchiveEntry();
+public:
     
-    ZipArchiveEntry(const ZipArchiveEntry&);
+    ZipArchiveEntry(ZipArchive& archive, std::string_view fullPath);
     
-    ZipArchiveEntry& operator=(ZipArchiveEntry&);
+    ZipArchiveEntry(ZipArchive& archive, Central& central);
+
+private:
     
-    // static methods
-    static ZipArchiveEntry::Ptr CreateNew(ZipArchive* zipArchive, const std::string& fullPath);
+    const BitFlag& generalPurposeBitFlag() const noexcept;
     
-    static ZipArchiveEntry::Ptr CreateExisting(ZipArchive* zipArchive, detail::ZipCentralDirectoryFileHeader& cd);
+    BitFlag& generalPurposeBitFlag() noexcept;
     
-    // methods
-    void setCompressionMethod(u16 value);
+    void setGeneralPurposeBitFlag(BitFlag flag, bool set = true) noexcept;
     
-    BitFlag generalPurposeBitFlag() const;
+    const u16& versionToExtract() const noexcept;
     
-    void setGeneralPurposeBitFlag(BitFlag value, bool set = true);
+    u16& versionToExtract() noexcept;
     
-    u16 versionToExtract() const;
+    const u16& versionMadeBy() const noexcept;
     
-    void setVersionToExtract(u16 value);
+    u16& versionMadeBy() noexcept;
     
-    u16 versionMadeBy() const;
+    const i32& offsetOfLocalHeader() const noexcept;
     
-    void setVersionMadeBy(u16 value);
+    i32& offsetOfLocalHeader() noexcept;
     
-    i32 offsetOfLocalHeader() const;
-    
-    void setOffsetOfLocalHeader(i32 value);
-    
-    bool hasCompressionStream() const;
+    bool hasCompressionStream() const noexcept;
     
     void fetchLocalFileHeader();
     
-    void checkFilenameCorrection();
+    void checkFileNameCorrection();
     
     void fixVersionToExtractAtLeast(u16 value);
     
-    void syncLFH_with_CDFH();
+    void syncLocalWithCentralDirectoryFileHeader();
     
-    void syncCDFH_with_LFH();
+    void syncCentralDirectoryWithLocalFileHeader();
     
     std::ios::pos_type offsetOfCompressedData();
     
@@ -400,6 +409,8 @@ private:
     
     // for encryption
     void figureCrc32();
+    
+    u32 lastUintOfEncryptionHeader();
     
     u8 lastByteOfEncryptionHeader();
     

@@ -5,21 +5,23 @@
 
 #include "src/main/util/cast/iterators.h"
 
+using detail::EndOfCentralDirectoryBlock;
+using detail::ZipCentralDirectoryFileHeader;
 
-const std::string& ZipArchive::comment() const noexcept {
+std::string_view ZipArchive::comment() const noexcept {
     return endOfCentralDirectoryBlock.comment;
 }
 
-std::string& ZipArchive::comment() noexcept {
-    return endOfCentralDirectoryBlock.comment;
+void ZipArchive::setComment(std::string_view comment) noexcept {
+    endOfCentralDirectoryBlock.comment = comment;
 }
 
 
-const std::vector<ZipArchiveEntry::Ptr>& ZipArchive::entries() const noexcept {
+const ZipArchive::Entries& ZipArchive::entries() const noexcept {
     return _entries;
 }
 
-std::vector<ZipArchiveEntry::Ptr>& ZipArchive::entries() noexcept {
+ZipArchive::Entries& ZipArchive::entries() noexcept {
     return _entries;
 }
 
@@ -40,7 +42,7 @@ ZipArchive::Iterator ZipArchive::end() noexcept {
 }
 
 ZipArchive::ConstIterator ZipArchive::findEntry(std::string_view name) const noexcept {
-    return std::find_if(begin(), end(), [&name](const ZipArchiveEntry::Ptr& entry) {
+    return std::find_if(begin(), end(), [&name](const std::unique_ptr<ZipArchiveEntry>& entry) {
         return entry->fullName() == name;
     });
 }
@@ -58,7 +60,7 @@ ZipArchive::ConstMaybeEntry::ConstMaybeEntry(std::shared_ptr<const ZipArchive> a
     }
 }
 
-const std::string& ZipArchive::ConstMaybeEntry::directName() const noexcept {
+std::string_view ZipArchive::ConstMaybeEntry::directName() const noexcept {
     return std::get<std::string>(variant);
 }
 
@@ -66,15 +68,11 @@ ZipArchive::ConstIterator ZipArchive::ConstMaybeEntry::iterator() const noexcept
     return std::get<ConstIterator>(variant);
 }
 
-std::shared_ptr<const ZipArchiveEntry> ZipArchive::ConstMaybeEntry::entryPtr() const noexcept {
-    return *iterator();
-}
-
 const ZipArchiveEntry& ZipArchive::ConstMaybeEntry::entry() const noexcept {
-    return *entryPtr();
+    return **iterator();
 }
 
-const std::string& ZipArchive::ConstMaybeEntry::entryName() const noexcept {
+std::string_view ZipArchive::ConstMaybeEntry::entryName() const noexcept {
     return entry().fullName();
 }
 
@@ -98,7 +96,7 @@ ZipArchive::ConstMaybeEntry::operator bool() const noexcept {
     return exists();
 }
 
-const std::string& ZipArchive::ConstMaybeEntry::name() const noexcept {
+std::string_view ZipArchive::ConstMaybeEntry::name() const noexcept {
     return exists() ? directName() : entryName();
 }
 
@@ -121,8 +119,8 @@ ZipArchive::Iterator ZipArchive::MaybeEntry::iterator() noexcept {
     return iterators::removeConst<Entries>(impl.iterator());
 }
 
-std::shared_ptr<ZipArchiveEntry> ZipArchive::MaybeEntry::entryPtr() noexcept {
-    return std::const_pointer_cast<ZipArchiveEntry>(impl.entryPtr());
+std::unique_ptr<ZipArchiveEntry>& ZipArchive::MaybeEntry::entryPtr() noexcept {
+    return const_cast<std::unique_ptr<ZipArchiveEntry>&>(*impl.iterator());
 }
 
 bool ZipArchive::MaybeEntry::exists() const noexcept {
@@ -133,12 +131,16 @@ ZipArchive::MaybeEntry::operator bool() const noexcept {
     return exists();
 }
 
-const std::string& ZipArchive::MaybeEntry::name() const noexcept {
+std::string_view ZipArchive::MaybeEntry::name() const noexcept {
     return impl.name();
 }
 
-std::string& ZipArchive::MaybeEntry::name() noexcept {
-    return const_cast<std::string&>(impl.name());
+void ZipArchive::MaybeEntry::setName(std::string_view name) noexcept {
+    if (exists()) {
+        const_cast<ZipArchiveEntry&>(impl.entry()).setName(name);
+    } else {
+        impl.variant = std::string(name);
+    }
 }
 
 const ZipArchiveEntry& ZipArchive::MaybeEntry::get() const {
@@ -151,20 +153,20 @@ ZipArchiveEntry& ZipArchive::MaybeEntry::get() {
 }
 
 void ZipArchive::MaybeEntry::createForcefully() {
-    const auto newEntry = ZipArchiveEntry::CreateNew(&archive(), name());
+    auto newEntry = std::make_unique<ZipArchiveEntry>(archive(), name());
     if (exists()) {
-        entryPtr() = newEntry;
+        entryPtr().swap(newEntry);
     } else {
         auto& entries = archive().entries();
         impl.variant = entries.end();
-        entries.push_back(newEntry);
+        entries.push_back(std::move(newEntry));
     }
 }
 
 void ZipArchive::MaybeEntry::removeForcefully() {
     auto& entries = archive().entries();
     entries.erase(iterator());
-    impl.variant = name();
+    impl.variant = std::string(name());
 }
 
 ZipArchive::MaybeEntry& ZipArchive::MaybeEntry::create(ZipArchive::MaybeEntry::CreateMode mode) {
@@ -240,7 +242,7 @@ bool ZipArchive::readEndOfCentralDirectory() {
     constexpr int MIN_SHIFT = (EOCDB_SIZE - SIGNATURE_SIZE);
     
     zipStream->seekg(-MIN_SHIFT, std::ios::end);
-    if (seekToSignature(detail::EndOfCentralDirectoryBlock::SIGNATURE_CONST, SeekDirection::Backward)) {
+    if (seekToSignature(EndOfCentralDirectoryBlock::SIGNATURE_CONST, SeekDirection::Backward)) {
         endOfCentralDirectoryBlock.deserialize(*zipStream);
         return true;
     }
@@ -248,22 +250,15 @@ bool ZipArchive::readEndOfCentralDirectory() {
 }
 
 bool ZipArchive::ensureCentralDirectoryRead() {
-    detail::ZipCentralDirectoryFileHeader zipCentralDirectoryFileHeader;
-    
     zipStream->seekg(endOfCentralDirectoryBlock.offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber,
                      std::ios::beg);
-    
-    while (zipCentralDirectoryFileHeader.deserialize(*zipStream)) {
-        ZipArchiveEntry::Ptr newEntry;
-        
-        if ((newEntry = ZipArchiveEntry::CreateExisting(this, zipCentralDirectoryFileHeader)) != nullptr) {
-            _entries.push_back(newEntry);
+    for (;;) {
+        ZipCentralDirectoryFileHeader central;
+        if (!central.deserialize(*zipStream)) {
+            break;
         }
-        
-        // ensure clearing of the CDFH struct
-        zipCentralDirectoryFileHeader = detail::ZipCentralDirectoryFileHeader();
+        _entries.push_back(std::make_unique<ZipArchiveEntry>(*this, central));
     }
-    
     return true;
 }
 
@@ -301,27 +296,29 @@ ZipArchive::~ZipArchive() {
 
 
 void ZipArchive::writeTo(std::ostream& stream) {
-    auto startPosition = stream.tellp();
+    const auto startPosition = stream.tellp();
     
     for (auto& entry : entries()) {
         entry->serializeLocalFileHeader(stream);
     }
     
-    auto offsetOfStartOfCDFH = stream.tellp() - startPosition;
+    const auto offsetOfStartOfCDFH = stream.tellp() - startPosition;
     for (auto& entry : entries()) {
         entry->serializeCentralDirectoryFileHeader(stream);
     }
     
-    endOfCentralDirectoryBlock.diskNumber = 0;
-    endOfCentralDirectoryBlock.startOfCentralDirectoryDiskNum = 0;
+    auto& block = endOfCentralDirectoryBlock;
     
-    endOfCentralDirectoryBlock.numberEntriesInCentralDirectory = static_cast<u16>(_entries.size());
-    endOfCentralDirectoryBlock.numberEntriesInDiskCentralDirectory = static_cast<u16>(_entries.size());
+    block.diskNumber = 0;
+    block.startOfCentralDirectoryDiskNum = 0;
     
-    endOfCentralDirectoryBlock.centralDirectorySize = static_cast<u32>(stream.tellp() - offsetOfStartOfCDFH);
-    endOfCentralDirectoryBlock.offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber = static_cast<u32>(offsetOfStartOfCDFH);
+    block.numberEntriesInCentralDirectory = static_cast<u16>(entries().size());
+    block.numberEntriesInDiskCentralDirectory = static_cast<u16>(entries().size());
     
-    endOfCentralDirectoryBlock.serialize(stream);
+    block.centralDirectorySize = static_cast<u32>(stream.tellp() - offsetOfStartOfCDFH);
+    block.offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber = static_cast<u32>(offsetOfStartOfCDFH);
+    
+    block.serialize(stream);
 }
 
 

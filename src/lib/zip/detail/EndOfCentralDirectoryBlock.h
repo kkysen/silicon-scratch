@@ -12,7 +12,8 @@ class ZipArchiveEntry;
 
 namespace detail {
     
-    struct __attribute__((packed)) EndOfCentralDirectoryBlockBase {
+    struct EndOfCentralDirectoryBlockBase {
+        
         u32 signature;
         u16 diskNumber;
         u16 startOfCentralDirectoryDiskNum;
@@ -21,6 +22,11 @@ namespace detail {
         u32 centralDirectorySize;
         u32 offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber;
         u16 commentLength;
+        
+        void deserializeBase(std::istream& stream);
+        
+        void serializeBase(std::ostream& stream);
+        
     };
     
     struct EndOfCentralDirectoryBlock : EndOfCentralDirectoryBlockBase {

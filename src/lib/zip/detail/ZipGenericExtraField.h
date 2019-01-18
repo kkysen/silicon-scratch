@@ -10,9 +10,15 @@ namespace detail {
     
     struct ZipGenericExtraField {
         
-        struct __attribute__((packed)) Header {
+        struct Header {
+            
             u16 tag;
             u16 size;
+            
+            void deserialize(std::istream& stream);
+            
+            void serialize(std::ostream& stream);
+            
         } header;
         
         std::vector<u8> data;

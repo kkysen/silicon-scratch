@@ -32,7 +32,7 @@ std::ios::pos_type deserialize(std::basic_istream<E, Traits>& stream,
         String<E, Traits, Allocator>& out, size_t length) {
     if (length > 0) {
         out.resize(length, E(0));
-        stream.read(reinterpret_cast<E*>(&out[0]), length);
+        stream.read(reinterpret_cast<E*>(out.data()), length);
         return stream.gcount();
     }
     return 0;
@@ -53,7 +53,7 @@ deserialize(std::basic_istream<E, Traits>& stream, Vector<VectorElement, Allocat
     
     if (length > 0) {
         out.resize(length, VectorElement());
-        stream.read(reinterpret_cast<E*>(&out[0]), length);
+        stream.read(reinterpret_cast<E*>(out.data()), length);
         return stream.gcount();
     }
     
@@ -92,5 +92,5 @@ template <typename E, typename Traits, typename VectorElement, typename Allocato
 void serialize(std::basic_ostream<E, Traits>& stream,
                const Vector<VectorElement, Allocator>& value) {
     static_assert(sizeof(E) == sizeof(VectorElement), "sizes must match");
-    stream.write(reinterpret_cast<const E*>(&value[0]), value.size());
+    stream.write(reinterpret_cast<const E*>(value.data()), value.size());
 }

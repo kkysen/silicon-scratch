@@ -15,14 +15,14 @@
 
 namespace utils::time {
     
-    void timeStampToDateTime(time_t dateTime, u16& date, u16& time) {
+    void timeStampToDateTime(time_t dateTime, u16& date, u16& time) noexcept {
         tm timeStruct = {};
         streamLocalTime(&dateTime, &timeStruct);
         date = static_cast<u16>(((timeStruct.tm_year - 80) << 9) + ((timeStruct.tm_mon + 1) << 5) + timeStruct.tm_mday);
         time = static_cast<u16>((timeStruct.tm_hour << 11) + (timeStruct.tm_min << 5) + (timeStruct.tm_sec >> 1));
     }
     
-    time_t dateTimeToTimeStamp(uint16_t date, uint16_t time) {
+    time_t dateTimeToTimeStamp(u16 date, u16 time) noexcept {
         tm timeStruct {
                 .tm_sec = ((time << 1) & 0x3f),
                 .tm_min = ((time >> 5) & 0x3f),

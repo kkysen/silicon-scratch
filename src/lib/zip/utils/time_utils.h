@@ -7,8 +7,8 @@
 
 namespace utils::time {
     
-    void timeStampToDateTime(time_t dateTime, u16& date, u16& time);
+    void timeStampToDateTime(time_t dateTime, u16& date, u16& time) noexcept;
     
-    time_t dateTimeToTimeStamp(uint16_t date, uint16_t time);
+    time_t dateTimeToTimeStamp(u16 date, u16 time) noexcept;
     
 }

@@ -10,7 +10,7 @@
 
 namespace {
     
-    std::string getFilenameFromPath(const std::string& fullPath) {
+    std::string getFileNameFromPath(const std::string& fullPath) {
         std::string::size_type dirSeparatorPos;
         
         if ((dirSeparatorPos = fullPath.find_last_of('/')) != std::string::npos) {
@@ -48,7 +48,7 @@ ZipArchive ZipFile::open(const std::string& zipPath) {
 
 void ZipFile::AddFile(
         const std::string& zipPath, const std::string& fileName, ICompressionMethod::Ptr method) {
-    AddFile(zipPath, fileName, getFilenameFromPath(fileName), std::move(method));
+    AddFile(zipPath, fileName, getFileNameFromPath(fileName), std::move(method));
 }
 
 void ZipFile::AddFile(
@@ -61,7 +61,7 @@ void ZipFile::AddEncryptedFile(
         const std::string& zipPath, const std::string& fileName, const std::string& password,
         ICompressionMethod::Ptr method) {
     // not sure why empty string was being passed as the password, so I changed it
-    AddEncryptedFile(zipPath, fileName, getFilenameFromPath(fileName), password, std::move(method));
+    AddEncryptedFile(zipPath, fileName, getFileNameFromPath(fileName), password, std::move(method));
 //    AddEncryptedFile(zipPath, fileName, GetFilenameFromPath(fileName), std::string(), std::move(method));
 }
 
@@ -112,7 +112,7 @@ void ZipFile::AddEncryptedFile(
 }
 
 void ZipFile::ExtractFile(const std::string& zipPath, const std::string& fileName) {
-    ExtractFile(zipPath, fileName, getFilenameFromPath(fileName));
+    ExtractFile(zipPath, fileName, getFileNameFromPath(fileName));
 }
 
 void ZipFile::ExtractFile(
@@ -122,7 +122,7 @@ void ZipFile::ExtractFile(
 
 void ZipFile::ExtractEncryptedFile(
         const std::string& zipPath, const std::string& fileName, const std::string& password) {
-    ExtractEncryptedFile(zipPath, fileName, getFilenameFromPath(fileName), password);
+    ExtractEncryptedFile(zipPath, fileName, getFileNameFromPath(fileName), password);
 }
 
 void ZipFile::ExtractEncryptedFile(const std::string& zipPath, const std::string& fileName,

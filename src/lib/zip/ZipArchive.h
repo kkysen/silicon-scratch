@@ -23,9 +23,7 @@ class ZipArchive : public std::enable_shared_from_this<ZipArchive> {
 
 public:
     
-    using Ptr = std::shared_ptr<ZipArchive>;
-    
-    using Entries = std::vector<ZipArchiveEntry::Ptr>;
+    using Entries = std::vector<std::unique_ptr<ZipArchiveEntry>>;
     using ConstIterator = typename Entries::const_iterator;
     using Iterator = typename Entries::iterator;
 
@@ -38,11 +36,11 @@ private:
 
 public:
     
-    const std::string& comment() const noexcept;
+    std::string_view comment() const noexcept;
     
-    std::string& comment() noexcept;
+    void setComment(std::string_view comment) noexcept;
     
-    const std::vector<ZipArchiveEntry::Ptr>& entries() const noexcept;
+    const Entries& entries() const noexcept;
     
     Entries& entries() noexcept;
     
@@ -78,15 +76,13 @@ public:
 
     private:
         
-        const std::string& directName() const noexcept;
+        std::string_view directName() const noexcept;
     
         ConstIterator iterator() const noexcept;
-    
-        std::shared_ptr<const ZipArchiveEntry> entryPtr() const noexcept;
-    
+        
         const ZipArchiveEntry& entry() const noexcept;
     
-        const std::string& entryName() const noexcept;
+        std::string_view entryName() const noexcept;
     
         std::runtime_error error(std::string_view action, std::string_view reason) const noexcept;
         
@@ -95,8 +91,8 @@ public:
         bool exists() const noexcept;
     
         operator bool() const noexcept;
-        
-        const std::string& name() const noexcept;
+    
+        std::string_view name() const noexcept;
         
         const ZipArchiveEntry& get() const;
         
@@ -118,7 +114,7 @@ public:
     
         Iterator iterator() noexcept;
     
-        std::shared_ptr<ZipArchiveEntry> entryPtr() noexcept;
+        std::unique_ptr<ZipArchiveEntry>& entryPtr() noexcept;
         
     public:
     
@@ -126,9 +122,9 @@ public:
         
         operator bool() const noexcept;
     
-        const std::string& name() const noexcept;
+        std::string_view name() const noexcept;
         
-        std::string& name() noexcept;
+        void setName(std::string_view name) noexcept;
         
         const ZipArchiveEntry& get() const;
         

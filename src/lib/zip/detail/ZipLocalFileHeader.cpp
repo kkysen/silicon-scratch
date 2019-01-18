@@ -27,14 +27,50 @@ namespace detail {
         fileNameLength = static_cast<u16>(fileName.length());
     }
     
+    void ZipLocalFileHeaderBase::deserializeBase(std::istream& stream) {
+        // packing the struct causes issues with references
+//        ::deserialize(stream, *this);
+        
+        ::deserialize(stream, signature);
+        ::deserialize(stream, versionNeededToExtract);
+        ::deserialize(stream, generalPurposeBitFlag);
+        ::deserialize(stream, compressionMethod);
+        ::deserialize(stream, compressionMethod);
+        ::deserialize(stream, lastModificationTime);
+        ::deserialize(stream, lastModificationDate);
+        ::deserialize(stream, crc32);
+        ::deserialize(stream, compressedSize);
+        ::deserialize(stream, unCompressedSize);
+        ::deserialize(stream, fileNameLength);
+        ::deserialize(stream, extraFieldLength);
+    }
+    
+    void ZipLocalFileHeaderBase::serializeBase(std::ostream& stream) {
+        // packing the struct causes issues with references
+//        ::serialize(stream, *this);
+        
+        ::serialize(stream, signature);
+        ::serialize(stream, versionNeededToExtract);
+        ::serialize(stream, generalPurposeBitFlag);
+        ::serialize(stream, compressionMethod);
+        ::serialize(stream, compressionMethod);
+        ::serialize(stream, lastModificationTime);
+        ::serialize(stream, lastModificationDate);
+        ::serialize(stream, crc32);
+        ::serialize(stream, compressedSize);
+        ::serialize(stream, unCompressedSize);
+        ::serialize(stream, fileNameLength);
+        ::serialize(stream, extraFieldLength);
+    }
+    
     bool ZipLocalFileHeader::deserialize(std::istream& stream) {
-        ::deserialize<ZipLocalFileHeaderBase>(stream, *this);
+        deserializeBase(stream);
         
         // If there is not any other entry.
         if (stream.fail() || signature != SIGNATURE_CONST) {
             stream.clear();
             const auto offset = static_cast<std::ios::streamoff>(stream.tellg()) - stream.gcount();
-            stream.seekg(static_cast<std::ios::off_type>(offset),std::ios::beg);
+            stream.seekg(static_cast<std::ios::off_type>(offset), std::ios::beg);
             return false;
         }
         
@@ -66,8 +102,8 @@ namespace detail {
         for (auto& extraField : extraFields) {
             extraFieldLength += extraField.size();
         }
-    
-        ::serialize<ZipLocalFileHeaderBase>(stream, *this);
+        
+        serializeBase(stream);
         
         ::serialize(stream, fileName);
         
@@ -85,20 +121,13 @@ namespace detail {
         // the signature is optional, if it's missing,
         // we're starting with crc32
         if (firstWord != DATA_DESCRIPTOR_SIGNATURE) {
-            auto _crc32 = crc32;
-            ::deserialize(stream, _crc32);
-            crc32 = _crc32;
+            ::deserialize(stream, crc32);
         } else {
             crc32 = firstWord;
         }
         
-        // can't make pointer from packed fields
-        auto _compressedSize = compressedSize;
-        auto _unCompressedSize = unCompressedSize;
-        ::deserialize(stream, _compressedSize);
-        ::deserialize(stream, _unCompressedSize);
-        compressedSize = _compressedSize;
-        unCompressedSize = _unCompressedSize;
+        ::deserialize(stream, compressedSize);
+        ::deserialize(stream, unCompressedSize);
     }
     
     void ZipLocalFileHeader::serializeAsDataDescriptor(std::ostream& stream) {

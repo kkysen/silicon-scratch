@@ -203,7 +203,7 @@ set(LIB_FILES
 set(MAIN_FILES
         src/main/core/main.cpp
         src/main/core/main.h
-        src/main/util/cast/iterators.h src/main/util/numbers.h src/main/util/strings.cpp src/main/util/strings.h)
+        src/main/util/cast/iterators.h src/main/util/numbers.h src/main/util/strings.cpp src/main/util/strings.h src/main/util/MappedIterator.h)
 
 set(SOURCE_FILES
         ${MAIN_FILES}

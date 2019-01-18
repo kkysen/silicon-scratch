@@ -4,6 +4,22 @@
 
 namespace detail {
     
+    void ZipGenericExtraField::Header::deserialize(std::istream& stream) {
+        // packing the struct causes issues with references
+//        ::deserialize(stream, *this);
+    
+        ::deserialize(stream, tag);
+        ::deserialize(stream, size);
+    }
+    
+    void ZipGenericExtraField::Header::serialize(std::ostream& stream) {
+        // packing the struct causes issues with references
+//        ::serialize(stream, *this);
+    
+        ::serialize(stream, tag);
+        ::serialize(stream, size);
+    }
+    
     u16 ZipGenericExtraField::size() const noexcept {
         return sizeof(header) + data.size();
     }
@@ -13,8 +29,7 @@ namespace detail {
             return false;
         }
         
-        // TODO are the :: supposed to be there?
-        ::deserialize(stream, header);
+        header.deserialize(stream);
         
         if ((extraFieldEnd - stream.tellg()) < header.size) {
             return false;
@@ -27,7 +42,7 @@ namespace detail {
     
     void ZipGenericExtraField::serialize(std::ostream& stream) {
         header.size = static_cast<u16>(data.size());
-        ::serialize(stream, header);
+        header.serialize(stream);
         ::serialize(stream, data);
     }
     

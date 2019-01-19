@@ -22,7 +22,7 @@ class ZipArchive;
 /**
  * \brief Represents a compressed file within a zip archive.
  */
-class ZipArchiveEntry : public std::enable_shared_from_this<ZipArchiveEntry> {
+class ZipArchiveEntry {
     
     friend class ZipArchive;
 
@@ -58,6 +58,7 @@ public:
 private:
     
     ZipArchive& archive;           //< pointer to the owning zip archive
+    size_t index;
     
     std::shared_ptr<std::istream> _rawStream = nullptr;         //< stream of raw compressed data
     std::shared_ptr<std::istream> compressionStream = nullptr; //< stream of uncompressed data
@@ -356,12 +357,22 @@ private:
     };
     
     MARK_AS_TYPED_ENUMFLAGS_FRIEND(BitFlag);
-    
+
+    struct ConstructorKey {};
+
 public:
+
+    ZipArchiveEntry(ConstructorKey key, ZipArchive& archive, size_t index, std::string_view fullPath);
+
+    ZipArchiveEntry(ConstructorKey key, ZipArchive& archive, size_t index, Central& central);
     
-    ZipArchiveEntry(ZipArchive& archive, std::string_view fullPath);
+    ZipArchiveEntry(ZipArchiveEntry&& other) = delete;
     
-    ZipArchiveEntry(ZipArchive& archive, Central& central);
+    ZipArchiveEntry(const ZipArchiveEntry& other) = delete;
+    
+    ZipArchiveEntry& operator=(ZipArchiveEntry&& other) = delete;
+    
+    ZipArchiveEntry& operator=(const ZipArchiveEntry& other) = delete;
 
 private:
     

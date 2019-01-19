@@ -203,7 +203,7 @@ set(LIB_FILES
 set(MAIN_FILES
         src/main/core/main.cpp
         src/main/core/main.h
-        src/main/util/cast/iterators.h src/main/util/numbers.h src/main/util/strings.cpp src/main/util/strings.h src/main/util/MappedIterator.h)
+        src/main/util/cast/iterators.h src/main/util/numbers.h src/main/util/strings.cpp src/main/util/strings.h src/main/util/MappedIterator.h src/main/util/SlicedIterable.h)
 
 set(SOURCE_FILES
         ${MAIN_FILES}
@@ -217,7 +217,7 @@ set(TEST_FILES
         src/test/Test.h
         src/test/Tests.cpp
         src/test/Tests.h
-        )
+        src/test/misc.cpp)
 
 add_library(SiliconScratch STATIC ${SOURCE_FILES})
 

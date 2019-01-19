@@ -352,16 +352,15 @@ void ZipArchiveEntry::unSetCompressionStream() {
 }
 
 void ZipArchiveEntry::remove() {
-    auto it = std::find_if(
-            archive.begin(), archive.end(),
-            [this](const std::unique_ptr<ZipArchiveEntry>& entry) {
-                return entry.get() == this;
-            }
-    );
-    assert(it != archive.end());
-    archive.entries().erase(it);
-    // trying to avoid double free, I'd rather not use shared_ptr
-//    delete this;
+    size_t i = 0;
+    for (const auto& entry : archive) {
+        if (&entry == this) {
+            archive.removeEntry(i);
+            return;
+        }
+        i++;
+    }
+    assert(false);
 }
 
 // private getters & setters
@@ -631,8 +630,10 @@ u8 ZipArchiveEntry::lastByteOfEncryptionHeader() {
     return static_cast<u8>(lastUintOfEncryptionHeader() & 0xFF);
 }
 
-ZipArchiveEntry::ZipArchiveEntry(ZipArchive& archive, std::string_view fullPath)
+ZipArchiveEntry::ZipArchiveEntry(ConstructorKey key [[maybe_unused]],
+                                 ZipArchive& archive, size_t index, std::string_view fullPath)
         : archive(archive),
+          index(index),
           isNewOrChanged(true) {
     checkFileName(fullPath);
     setAttributes(Attributes::Archive);
@@ -644,9 +645,10 @@ ZipArchiveEntry::ZipArchiveEntry(ZipArchive& archive, std::string_view fullPath)
     generalPurposeBitFlag() |= BitFlag::None;
 }
 
-ZipArchiveEntry::ZipArchiveEntry(ZipArchive& archive,
-                                 Central& central)
+ZipArchiveEntry::ZipArchiveEntry(ConstructorKey key [[maybe_unused]],
+                                 ZipArchive& archive, size_t index, Central& central)
         : archive(archive),
+          index(index),
           originallyInArchive(true),
           fileHeader({.local = Local(), .central = central,}) {
     checkFileName(central.fileName);

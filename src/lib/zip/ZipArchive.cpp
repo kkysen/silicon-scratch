@@ -25,51 +25,71 @@ ZipArchive::Entries& ZipArchive::entries() noexcept {
     return _entries;
 }
 
-ZipArchive::ConstIterator ZipArchive::begin() const noexcept {
-    return entries().begin();
+size_t ZipArchive::size() const noexcept {
+    return entries().size();
 }
 
-ZipArchive::Iterator ZipArchive::begin() noexcept {
-    return entries().begin();
+const ZipArchiveEntry& ZipArchive::operator[](size_t i) const noexcept {
+    return *entries()[i];
 }
 
-ZipArchive::ConstIterator ZipArchive::end() const noexcept {
-    return entries().end();
+ZipArchiveEntry& ZipArchive::operator[](size_t i) noexcept {
+    return *entries()[i];
 }
 
-ZipArchive::Iterator ZipArchive::end() noexcept {
-    return entries().end();
+
+size_t ZipArchive::findEntry(std::string_view name) const noexcept {
+    size_t i = 0;
+    for (const auto& entry : *this) {
+        if (entry.fullName() == name) {
+            return i;
+        }
+        i++;
+    }
+    return invalidIndex;
+//    const auto it = std::find_if(begin(), end(), [&name](const ZipArchiveEntry& entry) {
+//        return entry.fullName() == name;
+//    });
+//    if (it == end()) {
+//        return invalidIndex;
+//    }
+//    return static_cast<size_t>(end() - it);
 }
 
-ZipArchive::ConstIterator ZipArchive::findEntry(std::string_view name) const noexcept {
-    return std::find_if(begin(), end(), [&name](const std::unique_ptr<ZipArchiveEntry>& entry) {
-        return entry->fullName() == name;
-    });
+void ZipArchive::removeEntry(size_t index) {
+    // TODO use SlicedIterable
+    for (auto it = begin() + index; it != end(); ++it) {
+        it->index--;
+    }
+    entries().erase(entries().begin() + index);
 }
 
 
 ZipArchive::ConstMaybeEntry::ConstMaybeEntry(std::shared_ptr<const ZipArchive> archivePtr,
                                              const std::string& name) noexcept
-        : archive(std::move(archivePtr)) {
-    auto& archive = *archivePtr;
-    auto found = archive.findEntry(name);
-    if (found == archive.end()) {
+        : _archive(std::move(archivePtr)) {
+    const auto index = archive().findEntry(name);
+    if (index == invalidIndex) {
         variant = name;
     } else {
-        variant = found;
+        variant = index;
     }
+}
+
+const ZipArchive& ZipArchive::ConstMaybeEntry::archive() const noexcept {
+    return *_archive;
 }
 
 std::string_view ZipArchive::ConstMaybeEntry::directName() const noexcept {
     return std::get<std::string>(variant);
 }
 
-ZipArchive::ConstIterator ZipArchive::ConstMaybeEntry::iterator() const noexcept {
-    return std::get<ConstIterator>(variant);
+size_t ZipArchive::ConstMaybeEntry::index() const noexcept {
+    return std::get<size_t>(variant);
 }
 
 const ZipArchiveEntry& ZipArchive::ConstMaybeEntry::entry() const noexcept {
-    return **iterator();
+    return *archive().entries()[index()];
 }
 
 std::string_view ZipArchive::ConstMaybeEntry::entryName() const noexcept {
@@ -89,7 +109,7 @@ std::runtime_error ZipArchive::ConstMaybeEntry::error(std::string_view action, s
 }
 
 bool ZipArchive::ConstMaybeEntry::exists() const noexcept {
-    return std::holds_alternative<ConstIterator>(variant);
+    return std::holds_alternative<size_t>(variant);
 }
 
 ZipArchive::ConstMaybeEntry::operator bool() const noexcept {
@@ -110,17 +130,13 @@ const ZipArchiveEntry& ZipArchive::ConstMaybeEntry::get() const {
 
 ZipArchive::MaybeEntry::MaybeEntry(std::shared_ptr<ZipArchive> archive, const std::string& name) noexcept
         : impl(archive, name) {}
-
-ZipArchive& ZipArchive::MaybeEntry::archive() noexcept {
-    return const_cast<ZipArchive&>(*impl.archive);
+        
+ZipArchive::Entries& ZipArchive::MaybeEntry::entries() noexcept {
+    return const_cast<Entries&>(impl.archive().entries());
 }
 
-ZipArchive::Iterator ZipArchive::MaybeEntry::iterator() noexcept {
-    return iterators::removeConst<Entries>(impl.iterator());
-}
-
-std::unique_ptr<ZipArchiveEntry>& ZipArchive::MaybeEntry::entryPtr() noexcept {
-    return const_cast<std::unique_ptr<ZipArchiveEntry>&>(*impl.iterator());
+ZipArchiveEntry& ZipArchive::MaybeEntry::entry() noexcept {
+    return const_cast<ZipArchiveEntry&>(impl.entry());
 }
 
 bool ZipArchive::MaybeEntry::exists() const noexcept {
@@ -153,20 +169,23 @@ ZipArchiveEntry& ZipArchive::MaybeEntry::get() {
 }
 
 void ZipArchive::MaybeEntry::createForcefully() {
-    auto newEntry = std::make_unique<ZipArchiveEntry>(archive(), name());
-    if (exists()) {
-        entryPtr().swap(newEntry);
+    auto& entries = this->entries();
+    const auto exists = this->exists();
+    const auto i = exists ? impl.index() : entries.size();
+    auto newEntry = std::make_unique<ZipArchiveEntry>(ZipArchiveEntry::ConstructorKey(),
+            const_cast<ZipArchive&>(impl.archive()), i, name());
+    if (exists) {
+        entries[i].swap(newEntry);
     } else {
-        auto& entries = archive().entries();
-        impl.variant = entries.end();
+        impl.variant = i;
         entries.push_back(std::move(newEntry));
     }
 }
 
 void ZipArchive::MaybeEntry::removeForcefully() {
-    auto& entries = archive().entries();
-    entries.erase(iterator());
+    auto& entry = this->entry();
     impl.variant = std::string(name());
+    entry.remove();
 }
 
 ZipArchive::MaybeEntry& ZipArchive::MaybeEntry::create(ZipArchive::MaybeEntry::CreateMode mode) {
@@ -252,12 +271,14 @@ bool ZipArchive::readEndOfCentralDirectory() {
 bool ZipArchive::ensureCentralDirectoryRead() {
     zipStream->seekg(endOfCentralDirectoryBlock.offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber,
                      std::ios::beg);
+    auto& entries = this->entries();
     for (;;) {
         ZipCentralDirectoryFileHeader central;
         if (!central.deserialize(*zipStream)) {
             break;
         }
-        _entries.push_back(std::make_unique<ZipArchiveEntry>(*this, central));
+        entries.push_back(std::make_unique<ZipArchiveEntry>(ZipArchiveEntry::ConstructorKey(),
+                                                            *this, entries.size(), central));
     }
     return true;
 }

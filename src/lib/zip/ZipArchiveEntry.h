@@ -58,8 +58,6 @@ public:
     MARK_AS_TYPED_ENUM_FLAGS_FRIEND(CompressionMode);
 
 private:
-
-public:
     
     ZipArchive& archive;           //< pointer to the owning zip archive
     size_t index;

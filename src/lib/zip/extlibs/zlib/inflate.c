@@ -80,6 +80,7 @@
  * The history for versions after 1.2.0 are in ChangeLog in zlib distribution.
  */
 
+#include <stdio.h>
 #include "zutil.h"
 #include "inftrees.h"
 #include "inflate.h"
@@ -632,6 +633,7 @@ int ZEXPORT inflate(z_streamp strm, int flush) {
     out = left;
     ret = Z_OK;
     for (;;)
+//        printf("%d\n", state->mode);
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
         switch (state->mode) {

@@ -46,10 +46,12 @@ int main() {
     std::this_thread::sleep_for(10ms);
     
     // TODO make decompression const, since it doesn't change the archive
+    auto& entry = archive.entry("project.json").get();
     std::cout << "stream" << std::endl;
-    auto& stream = *archive.entry("project.json").get().decompressionStream();
+    auto& stream = *entry.decompressionStream();
     std::cout << stream.fail() << std::endl;
     std::cout << stream.tellg() << std::endl;
+    std::cout << entry.fullName() << std::endl;
     char chars[1000] = {};
     stream.read(chars, sizeof(chars) - 1);
     std::string s(chars);

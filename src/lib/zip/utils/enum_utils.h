@@ -1,15 +1,17 @@
 #pragma once
 #include <cstdint>
 
-#define MARK_AS_TYPED_ENUMFLAGS_BASE(EnumType, type, friend)                                                        \
-  inline friend bool     operator !  (EnumType  lhs)                { return bool( ! type (lhs) ); }                \
-  inline friend EnumType operator ~  (EnumType  lhs)                { return EnumType( ~ type (lhs) ); }            \
-  inline friend EnumType operator |  (EnumType  lhs, EnumType rhs)  { return EnumType( type (lhs) | type (rhs) ); } \
-  inline friend EnumType operator &  (EnumType  lhs, EnumType rhs)  { return EnumType( type (lhs) & type (rhs) ); } \
-  inline friend EnumType operator ^  (EnumType  lhs, EnumType rhs)  { return EnumType( type (lhs) ^ type (rhs) ); } \
-  inline friend EnumType operator |= (EnumType& lhs, EnumType rhs)  { return lhs = lhs | rhs; }                     \
-  inline friend EnumType operator &= (EnumType& lhs, EnumType rhs)  { return lhs = lhs & rhs; }                     \
-  inline friend EnumType operator ^= (EnumType& lhs, EnumType rhs)  { return lhs = lhs ^ rhs; }
+#include "src/main/util/numbers.h"
 
-#define MARK_AS_TYPED_ENUMFLAGS(EnumType)         MARK_AS_TYPED_ENUMFLAGS_BASE(EnumType, uint32_t, )
-#define MARK_AS_TYPED_ENUMFLAGS_FRIEND(EnumType)  MARK_AS_TYPED_ENUMFLAGS_BASE(EnumType, uint32_t, friend)
+#define MARK_AS_TYPED_ENUM_FLAGS_BASE(EnumType, type, friend)                                                        \
+  friend bool     operator !  (EnumType  lhs)                { return bool(!static_cast<type>(lhs)); }                \
+  friend EnumType operator ~  (EnumType  lhs)                { return EnumType(~static_cast<type>(lhs) ); }            \
+  friend EnumType operator |  (EnumType  lhs, EnumType rhs)  { return EnumType(static_cast<type>(lhs) | static_cast<type>(rhs)); } \
+  friend EnumType operator &  (EnumType  lhs, EnumType rhs)  { return EnumType(static_cast<type>(lhs) & static_cast<type>(rhs)); } \
+  friend EnumType operator ^  (EnumType  lhs, EnumType rhs)  { return EnumType(static_cast<type>(lhs) ^ static_cast<type>(rhs)); } \
+  friend EnumType operator |= (EnumType& lhs, EnumType rhs)  { return lhs = lhs | rhs; }                     \
+  friend EnumType operator &= (EnumType& lhs, EnumType rhs)  { return lhs = lhs & rhs; }                     \
+  friend EnumType operator ^= (EnumType& lhs, EnumType rhs)  { return lhs = lhs ^ rhs; }
+
+#define MARK_AS_TYPED_ENUM_FLAGS(EnumType)         MARK_AS_TYPED_ENUM_FLAGS_BASE(EnumType, u32, )
+#define MARK_AS_TYPED_ENUM_FLAGS_FRIEND(EnumType)  MARK_AS_TYPED_ENUM_FLAGS_BASE(EnumType, u32, friend)

@@ -42,9 +42,7 @@ namespace detail {
         
         if (extraFieldLength > 0) {
             ZipGenericExtraField extraField;
-            
             auto extraFieldEnd = extraFieldLength + stream.tellg();
-            
             while (extraField.deserialize(stream, extraFieldEnd)) {
                 extraFields.push_back(extraField);
             }

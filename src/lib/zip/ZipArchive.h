@@ -11,14 +11,16 @@
 #include <memory>
 #include <optional>
 #include <variant>
+#include <cassert>
 
 #include "src/main/util/MappedIterator.h"
 #include "src/main/util/numbers.h"
+#include "src/lib/fs/fs.h"
 
 /**
  * \brief Represents a package of compressed files in the zip archive format.
  */
-class ZipArchive : public std::enable_shared_from_this<ZipArchive> {
+class ZipArchive {
     
     friend class ZipArchiveEntry;
 
@@ -29,10 +31,8 @@ public:
 private:
     
     Entries _entries;
-    
     detail::EndOfCentralDirectoryBlock endOfCentralDirectoryBlock;
-    std::istream* zipStream = nullptr;
-    bool ownsStream = false;
+    std::unique_ptr<std::istream> stream;
 
 private:
     
@@ -91,14 +91,6 @@ public:
     const ZipArchiveEntry& operator[](size_t i) const noexcept;
     
     ZipArchiveEntry& operator[](size_t i) noexcept;
-    
-//    ConstIterator begin() const noexcept;
-//
-//    Iterator begin() noexcept;
-//
-//    ConstIterator end() const noexcept;
-//
-//    Iterator end() noexcept;
 
 private:
     
@@ -118,17 +110,15 @@ public:
     
     private:
         
-        const std::shared_ptr<const ZipArchive> _archive;
+        const ZipArchive& archive;
         std::variant<size_t, std::string> variant = invalidIndex;
         // store either entry, which has a name, or name for creation
     
     public:
         
-        ConstMaybeEntry(std::shared_ptr<const ZipArchive> archive, const std::string& name) noexcept;
+        ConstMaybeEntry(const ZipArchive& archive, const std::string& name) noexcept;
     
     private:
-        
-        const ZipArchive& archive() const noexcept;
         
         std::string_view directName() const noexcept;
         
@@ -160,7 +150,7 @@ public:
     
     public:
         
-        MaybeEntry(std::shared_ptr<ZipArchive> archive, const std::string& name) noexcept;
+        MaybeEntry(ZipArchive& archive, const std::string& name) noexcept;
     
     private:
         
@@ -221,21 +211,17 @@ private:
 
 public:
     
-    ZipArchive() = default;
-    
-    ZipArchive(ZipArchive&& other) noexcept;
-    
-    explicit ZipArchive(std::istream& stream);
-    
-    ZipArchive(std::istream* stream, bool takeOwnership);
+    ZipArchive(ZipArchive&& other) = delete;
     
     ZipArchive(const ZipArchive& other) = delete;
     
+    ZipArchive& operator=(ZipArchive&& other) = delete;
+    
     ZipArchive& operator=(const ZipArchive& other) = delete;
     
-    ZipArchive& operator=(ZipArchive&& other) noexcept = delete;
+    explicit ZipArchive(std::unique_ptr<std::istream>&& stream);
     
-    ~ZipArchive();
+    explicit ZipArchive(const fs::path& path);
     
     void writeTo(std::ostream& out);
     

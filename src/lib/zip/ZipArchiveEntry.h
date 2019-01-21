@@ -53,11 +53,13 @@ public:
         Compressed = 2048,
     };
     
-    MARK_AS_TYPED_ENUMFLAGS_FRIEND(Attributes);
+    MARK_AS_TYPED_ENUM_FLAGS_FRIEND(Attributes);
     
-    MARK_AS_TYPED_ENUMFLAGS_FRIEND(CompressionMode);
+    MARK_AS_TYPED_ENUM_FLAGS_FRIEND(CompressionMode);
 
 private:
+
+public:
     
     ZipArchive& archive;           //< pointer to the owning zip archive
     size_t index;
@@ -83,11 +85,15 @@ private:
     
     using Local = detail::ZipLocalFileHeader;
     using Central = detail::ZipCentralDirectoryFileHeader;
+
+public:
     
     struct {
         Local local;
         Central central;
     } fileHeader;
+
+private:
     
     struct {
         std::ios::pos_type compressedData;
@@ -357,7 +363,7 @@ public:
 
     ZipArchiveEntry(ConstructorKey key, ZipArchive& archive, size_t index, std::string_view fullPath);
 
-    ZipArchiveEntry(ConstructorKey key, ZipArchive& archive, size_t index, Central& central);
+    ZipArchiveEntry(ConstructorKey key, ZipArchive& archive, size_t index, const Central& central);
     
     ZipArchiveEntry(ZipArchiveEntry&& other) = delete;
     
@@ -368,13 +374,15 @@ public:
     ZipArchiveEntry& operator=(const ZipArchiveEntry& other) = delete;
     
     enum class BitFlag : u16 {
+        
         None = 1 << 0,
         Encrypted = 1 << 1,
         DataDescriptor = 1 << 3,
         UnicodeFileName = 1 << 11,
+        
     };
     
-    MARK_AS_TYPED_ENUMFLAGS_FRIEND(BitFlag);
+    MARK_AS_TYPED_ENUM_FLAGS_FRIEND(BitFlag);
     
 private:
     

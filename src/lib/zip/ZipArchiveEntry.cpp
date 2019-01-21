@@ -81,7 +81,8 @@ void ZipArchiveEntry::setFullName(std::string_view fullName) {
     }
     
     // find multiply slashes
-    std::string correctFileName(fileName.size(), 0);
+    std::string correctFileName;
+    correctFileName.reserve(fileName.size());
     bool prevWasSlash = false;
     for (auto c : fileName) {
         if (c == '/' && prevWasSlash) {
@@ -91,7 +92,6 @@ void ZipArchiveEntry::setFullName(std::string_view fullName) {
         correctFileName += c;
     }
     correctFileName.shrink_to_fit();
-    
     fileHeader.central.fileName = correctFileName;
     _name = getFileNameFromPath(correctFileName);
     
@@ -240,7 +240,7 @@ std::istream* ZipArchiveEntry::rawStream() {
         if (originallyInArchive) {
             const auto offsetOfCompressedData = seekToCompressedData();
             _rawStream = std::make_shared<isubstream>(
-                    *archive.zipStream, offsetOfCompressedData, compressedSize());
+                    *archive.stream, offsetOfCompressedData, compressedSize());
         } else {
             _rawStream = std::make_shared<isubstream>(*immediateBuffer);
         }
@@ -264,7 +264,7 @@ std::istream* ZipArchiveEntry::decompressionStream() {
         
         // make correctly-ended substream of the input stream
         intermediateStream = archiveStream = std::make_shared<isubstream>(
-                *archive.zipStream, offsetOfCompressedData, compressedSize());
+                *archive.stream, offsetOfCompressedData, compressedSize());
         
         if (needsPassword) {
             const std::shared_ptr<zip_cryptostream> cryptoStream = std::make_shared<zip_cryptostream>(
@@ -414,7 +414,7 @@ bool ZipArchiveEntry::hasCompressionStream() const noexcept {
 // private working methods
 
 void ZipArchiveEntry::fetchLocalFileHeader() {
-    auto& stream = *archive.zipStream;
+    auto& stream = *archive.stream;
     if (!hasLocalFileHeader && originallyInArchive) {
         stream.seekg(offsetOfLocalHeader(), std::ios::beg);
         fileHeader.local.deserialize(stream);
@@ -459,7 +459,7 @@ std::ios::pos_type ZipArchiveEntry::offsetOfCompressedData() {
 
 std::ios::pos_type ZipArchiveEntry::seekToCompressedData() {
     // check for fail bit?
-    archive.zipStream->seekg(offsetOfCompressedData(), std::ios::beg);
+    archive.stream->seekg(offsetOfCompressedData(), std::ios::beg);
     return offsetOfCompressedData();
 }
 
@@ -646,12 +646,13 @@ ZipArchiveEntry::ZipArchiveEntry(ConstructorKey key [[maybe_unused]],
 }
 
 ZipArchiveEntry::ZipArchiveEntry(ConstructorKey key [[maybe_unused]],
-                                 ZipArchive& archive, size_t index, Central& central)
+                                 ZipArchive& archive, size_t index, const Central& central)
         : archive(archive),
           index(index),
           originallyInArchive(true),
-          fileHeader({.local = Local(), .central = central,}) {
+          fileHeader({}) {
     checkFileName(central.fileName);
+    fileHeader.central = central;
     checkFileNameCorrection();
     
     // determining folder by path has more priority

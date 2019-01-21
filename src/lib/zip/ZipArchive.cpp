@@ -1,9 +1,6 @@
-#include <memory>
-
 #include "ZipArchive.h"
-#include "streams/serialization.h"
 
-#include "src/main/util/cast/iterators.h"
+#include <fstream>
 
 using detail::EndOfCentralDirectoryBlock;
 using detail::ZipCentralDirectoryFileHeader;
@@ -65,19 +62,15 @@ void ZipArchive::removeEntry(size_t index) {
 }
 
 
-ZipArchive::ConstMaybeEntry::ConstMaybeEntry(std::shared_ptr<const ZipArchive> archivePtr,
+ZipArchive::ConstMaybeEntry::ConstMaybeEntry(const ZipArchive& archive,
                                              const std::string& name) noexcept
-        : _archive(std::move(archivePtr)) {
-    const auto index = archive().findEntry(name);
+        : archive(std::move(archive)) {
+    const auto index = archive.findEntry(name);
     if (index == invalidIndex) {
         variant = name;
     } else {
         variant = index;
     }
-}
-
-const ZipArchive& ZipArchive::ConstMaybeEntry::archive() const noexcept {
-    return *_archive;
 }
 
 std::string_view ZipArchive::ConstMaybeEntry::directName() const noexcept {
@@ -89,7 +82,7 @@ size_t ZipArchive::ConstMaybeEntry::index() const noexcept {
 }
 
 const ZipArchiveEntry& ZipArchive::ConstMaybeEntry::entry() const noexcept {
-    return *archive().entries()[index()];
+    return *archive.entries()[index()];
 }
 
 std::string_view ZipArchive::ConstMaybeEntry::entryName() const noexcept {
@@ -128,11 +121,11 @@ const ZipArchiveEntry& ZipArchive::ConstMaybeEntry::get() const {
 }
 
 
-ZipArchive::MaybeEntry::MaybeEntry(std::shared_ptr<ZipArchive> archive, const std::string& name) noexcept
+ZipArchive::MaybeEntry::MaybeEntry(ZipArchive& archive, const std::string& name) noexcept
         : impl(archive, name) {}
-        
+
 ZipArchive::Entries& ZipArchive::MaybeEntry::entries() noexcept {
-    return const_cast<Entries&>(impl.archive().entries());
+    return const_cast<Entries&>(impl.archive.entries());
 }
 
 ZipArchiveEntry& ZipArchive::MaybeEntry::entry() noexcept {
@@ -173,7 +166,7 @@ void ZipArchive::MaybeEntry::createForcefully() {
     const auto exists = this->exists();
     const auto i = exists ? impl.index() : entries.size();
     auto newEntry = std::make_unique<ZipArchiveEntry>(ZipArchiveEntry::ConstructorKey(),
-            const_cast<ZipArchive&>(impl.archive()), i, name());
+                                                      const_cast<ZipArchive&>(impl.archive), i, name());
     if (exists) {
         entries[i].swap(newEntry);
     } else {
@@ -227,16 +220,16 @@ ZipArchive::MaybeEntry& ZipArchive::MaybeEntry::remove(ZipArchive::MaybeEntry::R
 
 
 ZipArchive::ConstMaybeEntry ZipArchive::entry(const std::string& name) const noexcept {
-    return ConstMaybeEntry(shared_from_this(), name);
+    return ConstMaybeEntry(*this, name);
 }
 
 ZipArchive::MaybeEntry ZipArchive::entry(const std::string& name) noexcept {
-    return MaybeEntry(shared_from_this(), name);
+    return MaybeEntry(*this, name);
 }
 
 
 bool ZipArchive::seekToSignature(u32 signature, ZipArchive::SeekDirection direction) {
-    auto& stream = *zipStream;
+    auto& stream = *this->stream;
     auto streamPosition = stream.tellg();
     while (!stream.eof() && !stream.fail()) {
         u32 buffer;
@@ -254,8 +247,7 @@ bool ZipArchive::seekToSignature(u32 signature, ZipArchive::SeekDirection direct
 bool ZipArchive::readEndOfCentralDirectory() {
     constexpr auto signature = EndOfCentralDirectoryBlock::constants::signature;
     constexpr auto minShift = (EndOfCentralDirectoryBlock::size - sizeof(signature));
-    
-    auto& stream = *zipStream;
+    auto& stream = *this->stream;
     stream.seekg(-minShift, std::ios::end);
     if (seekToSignature(EndOfCentralDirectoryBlock::constants::signature, SeekDirection::Backward)) {
         endOfCentralDirectoryBlock.deserialize(stream);
@@ -265,12 +257,13 @@ bool ZipArchive::readEndOfCentralDirectory() {
 }
 
 bool ZipArchive::ensureCentralDirectoryRead() {
-    zipStream->seekg(endOfCentralDirectoryBlock.offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber,
-                     std::ios::beg);
+    auto& stream = *this->stream;
+    stream.seekg(endOfCentralDirectoryBlock.offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber,
+                 std::ios::beg);
     auto& entries = this->entries();
     for (;;) {
         ZipCentralDirectoryFileHeader central;
-        if (!central.deserialize(*zipStream)) {
+        if (!central.deserialize(stream)) {
             break;
         }
         entries.push_back(std::make_unique<ZipArchiveEntry>(ZipArchiveEntry::ConstructorKey(),
@@ -284,44 +277,24 @@ bool ZipArchive::init() {
 }
 
 
-ZipArchive::ZipArchive(ZipArchive&& other) noexcept {
-    endOfCentralDirectoryBlock = other.endOfCentralDirectoryBlock;
-    _entries = std::move(other._entries);
-    zipStream = other.zipStream;
-    ownsStream = other.ownsStream;
-    
-    other.zipStream = nullptr;
-    other.ownsStream = false;
+ZipArchive::ZipArchive(std::unique_ptr<std::istream>&& stream) : stream(std::move(stream)) {
+    init();
 }
 
-ZipArchive::ZipArchive(std::istream& stream) : ZipArchive(&stream, false) {}
-
-ZipArchive::ZipArchive(std::istream* stream, bool takeOwnership) {
-    zipStream = stream;
-    ownsStream = stream != nullptr ? takeOwnership : false;
-    if (stream != nullptr) {
-        init();
-    }
-}
-
-ZipArchive::~ZipArchive() {
-    if (ownsStream && zipStream != nullptr) {
-        delete zipStream;
-        zipStream = nullptr;
-    }
-}
+ZipArchive::ZipArchive(const fs::path& path) : ZipArchive(std::make_unique<std::ifstream>(path)) {}
 
 
 void ZipArchive::writeTo(std::ostream& stream) {
     const auto startPosition = stream.tellp();
     
-    for (auto& entry : entries()) {
-        entry->serializeLocalFileHeader(stream);
+    // TODO make serialization const
+    for (auto& entry : *this) {
+        entry.serializeLocalFileHeader(stream);
     }
     
     const auto offsetOfStartOfCDFH = stream.tellp() - startPosition;
-    for (auto& entry : entries()) {
-        entry->serializeCentralDirectoryFileHeader(stream);
+    for (auto& entry : *this) {
+        entry.serializeCentralDirectoryFileHeader(stream);
     }
     
     auto& block = endOfCentralDirectoryBlock;
@@ -329,8 +302,9 @@ void ZipArchive::writeTo(std::ostream& stream) {
     block.diskNumber = 0;
     block.startOfCentralDirectoryDiskNum = 0;
     
-    block.numberEntriesInCentralDirectory = static_cast<u16>(entries().size());
-    block.numberEntriesInDiskCentralDirectory = static_cast<u16>(entries().size());
+    const auto numEntries = static_cast<u16>(entries().size());;
+    block.numberEntriesInCentralDirectory = numEntries;
+    block.numberEntriesInDiskCentralDirectory = numEntries;
     
     block.centralDirectorySize = static_cast<u32>(stream.tellp() - offsetOfStartOfCDFH);
     block.offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber = static_cast<u32>(offsetOfStartOfCDFH);

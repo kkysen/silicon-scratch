@@ -26,25 +26,25 @@ namespace {
     
 }
 
-ZipArchive ZipFile::open(const std::string& zipPath) {
-    auto zipFile = std::make_unique<std::ifstream>();
-    zipFile->open(zipPath, std::ios::binary);
-    
-    if (!zipFile->is_open()) {
-        // if file does not exist, try to create it
-        std::ofstream tmpFile;
-        tmpFile.open(zipPath, std::ios::binary);
-        tmpFile.close();
-        
-        zipFile->open(zipPath, std::ios::binary);
-        
-        // if attempt to create file failed, throw an exception
-        if (!zipFile->is_open()) {
-            throw std::runtime_error("cannot open zip file");
-        }
-    }
-    return std::move(ZipArchive(zipFile.release(), true));
-}
+//ZipArchive ZipFile::open(const std::string& zipPath) {
+//    auto zipFile = std::make_unique<std::ifstream>();
+//    zipFile->open(zipPath, std::ios::binary);
+//
+//    if (!zipFile->is_open()) {
+//        // if file does not exist, try to create it
+//        std::ofstream tmpFile;
+//        tmpFile.open(zipPath, std::ios::binary);
+//        tmpFile.close();
+//
+//        zipFile->open(zipPath, std::ios::binary);
+//
+//        // if attempt to create file failed, throw an exception
+//        if (!zipFile->is_open()) {
+//            throw std::runtime_error("cannot open zip file");
+//        }
+//    }
+//    return std::move(ZipArchive(zipFile.release(), true));
+//}
 
 void ZipFile::AddFile(
         const std::string& zipPath, const std::string& fileName, ICompressionMethod::Ptr method) {
@@ -71,7 +71,7 @@ void ZipFile::AddEncryptedFile(
     std::string tmpName = makeTempFilename(zipPath);
     
     {
-        auto zipArchive = ZipFile::open(zipPath);
+        auto zipArchive = ZipArchive(zipPath);
         
         std::ifstream fileToAdd;
         fileToAdd.open(fileName, std::ios::binary);
@@ -127,7 +127,7 @@ void ZipFile::ExtractEncryptedFile(
 
 void ZipFile::ExtractEncryptedFile(const std::string& zipPath, const std::string& fileName,
                                    const std::string& destinationPath, const std::string& password) {
-    auto zipArchive = ZipFile::open(zipPath);
+    auto zipArchive = ZipArchive(zipPath);
     
     std::ofstream destFile;
     destFile.open(destinationPath, std::ios::binary | std::ios::trunc);

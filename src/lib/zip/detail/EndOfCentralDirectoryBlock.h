@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "src/main/util/numbers.h"
+#include "src/lib/zip/streams/Serializable.h"
 
 class ZipArchive;
 
@@ -12,7 +13,7 @@ class ZipArchiveEntry;
 
 namespace detail {
     
-    struct EndOfCentralDirectoryBlockBase {
+    struct EndOfCentralDirectoryBlockBase : Serializable<EndOfCentralDirectoryBlockBase> {
         
         u32 signature;
         u16 diskNumber;
@@ -21,17 +22,19 @@ namespace detail {
         u16 numberEntriesInCentralDirectory;
         u32 centralDirectorySize;
         u32 offsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber;
-        u16 commentLength;
+        mutable u16 commentLength;
         
-        void deserializeBase(std::istream& stream);
-        
-        void serializeBase(std::ostream& stream);
+        u8 padding[2];
         
     };
     
     struct EndOfCentralDirectoryBlock : EndOfCentralDirectoryBlockBase {
         
-        static constexpr u32 SIGNATURE_CONST = 0x06054b50;
+        struct constants {
+    
+            static constexpr u32 signature = 0x06054b50;
+            
+        };
         
         std::string comment;
         
@@ -39,7 +42,7 @@ namespace detail {
         
         bool deserialize(std::istream& stream);
         
-        void serialize(std::ostream& stream);
+        void serialize(std::ostream& stream) const;
         
     };
     

@@ -4,24 +4,8 @@
 
 namespace detail {
     
-    void ZipGenericExtraField::Header::deserialize(std::istream& stream) {
-        // packing the struct causes issues with references
-//        ::deserialize(stream, *this);
-    
-        ::deserialize(stream, tag);
-        ::deserialize(stream, size);
-    }
-    
-    void ZipGenericExtraField::Header::serialize(std::ostream& stream) {
-        // packing the struct causes issues with references
-//        ::serialize(stream, *this);
-    
-        ::serialize(stream, tag);
-        ::serialize(stream, size);
-    }
-    
     u16 ZipGenericExtraField::size() const noexcept {
-        return sizeof(header) + data.size();
+        return static_cast<u16>(Header::Serializable::size + data.size());
     }
     
     bool ZipGenericExtraField::deserialize(std::istream& stream, std::istream::pos_type extraFieldEnd) {
@@ -29,7 +13,7 @@ namespace detail {
             return false;
         }
         
-        header.deserialize(stream);
+        header.deserializeBase(stream);
         
         if ((extraFieldEnd - stream.tellg()) < header.size) {
             return false;
@@ -40,9 +24,9 @@ namespace detail {
         return true;
     }
     
-    void ZipGenericExtraField::serialize(std::ostream& stream) {
+    void ZipGenericExtraField::serialize(std::ostream& stream) const {
         header.size = static_cast<u16>(data.size());
-        header.serialize(stream);
+        header.serializeBase(stream);
         ::serialize(stream, data);
     }
     

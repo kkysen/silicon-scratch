@@ -22,7 +22,7 @@ Json parse(const fs::path& path) {
     return std::move(json);
 }
 
-int main() {
+void test1() {
     const auto archive = ZipFile::open("/mnt/c/Users/Khyber/Downloads/Maze Starter.sb3");
     std::cout << "numEntries: " << archive.size() << std::endl;
     for (const auto& entry : archive) {
@@ -35,5 +35,18 @@ int main() {
     std::cout << "costumes: " << std::setw(4) << json["costumes"] << std::endl;
 //    llvm::Value* value = nullptr;
 //    std::cout << value << std::endl;
+}
+
+int main() {
+    test1();
+    
+    auto archive = ZipFile::open("/mnt/c/Users/Khyber/Downloads/Maze Starter.sb3");
+    // TODO make decompression const, since it doesn't change the archive
+    auto& stream = *archive.entry("project.json").get().decompressionStream();
+    Json json;
+    stream >> json;
+    std::cout << "json.size(): " << json.size() << std::endl;
+    std::cout << "costumes: " << std::setw(4) << json["costumes"] << std::endl;
+    
     return EXIT_SUCCESS;
 }

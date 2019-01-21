@@ -206,9 +206,9 @@ public:
 
 private:
     
-    enum class SeekDirection {
-        Forward,
-        Backward
+    enum class SeekDirection : i32 {
+        Forward = 1,
+        Backward = -1,
     };
     
     bool seekToSignature(u32 signature, SeekDirection direction);

@@ -6,7 +6,8 @@
 #include <memory>
 #include <vector>
 #include <list>
-//#include <src/main/util/MappedIterator.h>
+
+#include "../main/util/numbers.h"
 #include "../main/util/MappedIterator.h"
 
 class C {
@@ -63,7 +64,7 @@ public:
     
 };
 
-void misc() {
+void misc1() {
 
 //    {
 //        const auto p = std::make_unique<C>(1);
@@ -93,6 +94,66 @@ void misc() {
     }
 }
 
+struct ZipCentralDirectoryFileHeaderBase {
+    
+    u32 signature;
+    u16 versionMadeBy;
+    u16 versionNeededToExtract;
+    u16 generalPurposeBitFlag;
+    u16 compressionMethod;
+    u16 lastModificationTime;
+    u16 lastModificationDate;
+    u32 crc32;
+    u32 compressedSize;
+    u32 unCompressedSize;
+    u16 fileNameLength;
+    u16 extraFieldLength;
+    u16 fileCommentLength;
+    u16 diskNumberStart;
+    u16 internalFileAttributes;
+    
+    u8 padding[2];
+    
+    u32 externalFileAttributes;
+    i32 relativeOffsetOfLocalHeader;
+    
+//    u8 padding[4];
+    
+};
+
+struct __attribute__((packed)) ZipCentralDirectoryFileHeaderBasePacked {
+    
+    u32 signature;
+    u16 versionMadeBy;
+    u16 versionNeededToExtract;
+    u16 generalPurposeBitFlag;
+    u16 compressionMethod;
+    u16 lastModificationTime;
+    u16 lastModificationDate;
+    u32 crc32;
+    u32 compressedSize;
+    u32 unCompressedSize;
+    u16 fileNameLength;
+    u16 extraFieldLength;
+    u16 fileCommentLength;
+    u16 diskNumberStart;
+    u16 internalFileAttributes;
+    
+    u8 padding[2];
+    
+    u32 externalFileAttributes;
+    i32 relativeOffsetOfLocalHeader;
+    
+//    u8 padding[4];
+    
+};
+
+void misc2() {
+    std::cout << "normal: " << sizeof(ZipCentralDirectoryFileHeaderBase) << std::endl;
+    std::cout << "packed: " << sizeof(ZipCentralDirectoryFileHeaderBasePacked) << std::endl;
+}
+
 //int main() {
-//    misc();
+////    misc1();
+//    misc2();
 //}

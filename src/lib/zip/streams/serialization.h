@@ -4,6 +4,22 @@
 #include <string>
 #include <vector>
 
+template <typename T>
+size_t constexpr paddingSize() {
+    return sizeof(T().padding);
+}
+
+template <typename T>
+size_t constexpr unPaddedSize() {
+    return sizeof(T) - paddingSize<T>();
+}
+
+template <size_t paddingSize, typename R, typename E, typename Traits>
+std::ios::pos_type deserialize(std::basic_istream<E, Traits>& stream, R& out) {
+    stream.read(reinterpret_cast<E*>(&out), sizeof(R) - paddingSize);
+    return stream.gcount();
+}
+
 /**
  * \brief Deserializes the basic input type. Deserializes floating number from its binary representation.
  *
@@ -15,8 +31,13 @@
  */
 template <typename R, typename E, typename Traits>
 std::ios::pos_type deserialize(std::basic_istream<E, Traits>& stream, R& out) {
-    stream.read(reinterpret_cast<E*>(&out), sizeof(R));
-    return stream.gcount();
+    return deserialize<0, R, E, Traits>(stream, out);
+}
+
+// assumes R is padded with a member called padding
+template <typename R, typename E, typename Traits>
+std::ios::pos_type deserializeWithPadding(std::basic_istream<E, Traits>& stream, R& out) {
+    return deserialize<paddingSize<R>(), R, E, Traits>(stream, out);
 }
 
 /**
@@ -60,6 +81,11 @@ deserialize(std::basic_istream<E, Traits>& stream, Vector<VectorElement, Allocat
     return 0;
 }
 
+template <size_t paddingSize, typename T, typename E, typename Traits>
+void serialize(std::basic_ostream<E, Traits>& stream, const T& value) {
+    stream.write(reinterpret_cast<const E*>(&value), ((sizeof(T) - paddingSize) / sizeof(E)));
+}
+
 /**
  * \brief Serializes the basic input type. Serializes floating number into its binary representation.
  *
@@ -69,7 +95,13 @@ deserialize(std::basic_istream<E, Traits>& stream, Vector<VectorElement, Allocat
  */
 template <typename T, typename E, typename Traits>
 void serialize(std::basic_ostream<E, Traits>& stream, const T& value) {
-    stream.write(reinterpret_cast<const E*>(&value), sizeof(T) / sizeof(E));
+    serialize<0, T, E, Traits>(stream, value);
+}
+
+// assumes T is padded with a member called padding
+template <typename T, typename E, typename Traits>
+void serializeWithPadding(std::basic_ostream<E, Traits>& stream, const T& value) {
+    serialize<paddingSize<T>(), T, E, Traits>(stream, value);
 }
 
 /**

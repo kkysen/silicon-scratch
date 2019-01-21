@@ -12,7 +12,7 @@ namespace detail {
     
     struct ZipCentralDirectoryFileHeader;
     
-    struct ZipLocalFileHeaderBase {
+    struct ZipLocalFileHeaderBase : Serializable<ZipLocalFileHeaderBase> {
         
         u32 signature;
         u16 versionNeededToExtract;
@@ -23,19 +23,21 @@ namespace detail {
         u32 crc32;
         u32 compressedSize;
         u32 unCompressedSize;
-        u16 fileNameLength;
-        u16 extraFieldLength;
+        mutable u16 fileNameLength;
+        mutable u16 extraFieldLength;
         
-        void deserializeBase(std::istream& stream);
-        
-        void serializeBase(std::ostream& stream);
+        u8 padding[2];
         
     };
     
     struct ZipLocalFileHeader: ZipLocalFileHeaderBase {
         
-        static constexpr u32 SIGNATURE_CONST = 0x04034b50;
-        static constexpr u32 DATA_DESCRIPTOR_SIGNATURE = 0x08074b50;
+        struct constants {
+    
+            static constexpr u32 signature = 0x04034b50;
+            static constexpr u32 dataDescriptorSignature = 0x08074b50;
+            
+        };
         
         std::string fileName;
         std::vector<ZipGenericExtraField> extraFields;
@@ -46,11 +48,11 @@ namespace detail {
         
         bool deserialize(std::istream& stream);
         
-        void serialize(std::ostream& stream);
+        void serialize(std::ostream& stream) const;
         
         void deserializeAsDataDescriptor(std::istream& stream);
         
-        void serializeAsDataDescriptor(std::ostream& stream);
+        void serializeAsDataDescriptor(std::ostream& stream) const;
         
     };
     

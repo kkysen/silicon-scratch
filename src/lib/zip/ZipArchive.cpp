@@ -236,33 +236,29 @@ ZipArchive::MaybeEntry ZipArchive::entry(const std::string& name) noexcept {
 
 
 bool ZipArchive::seekToSignature(u32 signature, ZipArchive::SeekDirection direction) {
-    auto& zip = *zipStream;
-    
-    auto streamPosition = zip.tellg();
-    u32 buffer = 0;
-    auto appendix = direction == SeekDirection::Backward ? 0 - 1 : 1;
-    
-    while (!zip.eof() && !zip.fail()) {
-        deserialize(zip, buffer);
+    auto& stream = *zipStream;
+    auto streamPosition = stream.tellg();
+    while (!stream.eof() && !stream.fail()) {
+        u32 buffer;
+        deserialize(stream, buffer);
         if (buffer == signature) {
-            zip.seekg(streamPosition, std::ios::beg);
+            stream.seekg(streamPosition, std::ios::beg);
             return true;
         }
-        streamPosition += appendix;
-        zip.seekg(streamPosition, std::ios::beg);
+        streamPosition += static_cast<i32>(direction);
+        stream.seekg(streamPosition, std::ios::beg);
     }
-    
     return false;
 }
 
 bool ZipArchive::readEndOfCentralDirectory() {
-    constexpr int EOCDB_SIZE = 22; // sizeof(EndOfCentralDirectoryBlockBase);
-    constexpr int SIGNATURE_SIZE = 4;  // sizeof(std::declval<EndOfCentralDirectoryBlockBase>().Signature);
-    constexpr int MIN_SHIFT = (EOCDB_SIZE - SIGNATURE_SIZE);
+    constexpr auto signature = EndOfCentralDirectoryBlock::constants::signature;
+    constexpr auto minShift = (EndOfCentralDirectoryBlock::size - sizeof(signature));
     
-    zipStream->seekg(-MIN_SHIFT, std::ios::end);
-    if (seekToSignature(EndOfCentralDirectoryBlock::SIGNATURE_CONST, SeekDirection::Backward)) {
-        endOfCentralDirectoryBlock.deserialize(*zipStream);
+    auto& stream = *zipStream;
+    stream.seekg(-minShift, std::ios::end);
+    if (seekToSignature(EndOfCentralDirectoryBlock::constants::signature, SeekDirection::Backward)) {
+        endOfCentralDirectoryBlock.deserialize(stream);
         return true;
     }
     return false;

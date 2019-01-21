@@ -5,19 +5,18 @@
 #include <iostream>
 
 #include "src/main/util/numbers.h"
+#include "src/lib/zip/streams/Serializable.h"
 
 namespace detail {
     
     struct ZipGenericExtraField {
         
-        struct Header {
+        struct Header : Serializable<Header> {
             
             u16 tag;
-            u16 size;
-            
-            void deserialize(std::istream& stream);
-            
-            void serialize(std::ostream& stream);
+            mutable u16 size;
+    
+            u8 padding[0];
             
         } header;
         
@@ -27,7 +26,7 @@ namespace detail {
         
         bool deserialize(std::istream& stream, std::istream::pos_type extraFieldEnd);
         
-        void serialize(std::ostream& stream);
+        void serialize(std::ostream& stream) const;
         
     };
     

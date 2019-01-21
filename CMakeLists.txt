@@ -192,7 +192,7 @@ set(LIB_ZIP_FILES
         src/lib/zip/ZipArchiveEntry.h
         src/lib/zip/ZipFile.cpp
         src/lib/zip/ZipFile.h
-        src/lib/zip/utils/time_utils.cpp src/lib/zip/streams/Serializable.h)
+        src/lib/zip/utils/time_utils.cpp src/lib/zip/streams/Serializable.h src/lib/zip/utils/BitFlagSetter.h)
 
 set(LIB_FILES
         ${LIB_FS_FILES}

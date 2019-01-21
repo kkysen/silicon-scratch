@@ -17,6 +17,8 @@
 #include <vector>
 #include <memory>
 
+#include "src/lib/zip/utils/BitFlagSetter.h"
+
 class ZipArchive;
 
 /**
@@ -348,15 +350,6 @@ private:
     static constexpr u16 VERSION_NEEDED_EXPLICIT_DIRECTORY = 20;
     
     static constexpr u16 VERSION_NEEDED_ZIP64 = 45;
-    
-    enum class BitFlag : u16 {
-        None = 1 << 0,
-        Encrypted = 1 << 1,
-        DataDescriptor = 1 << 3,
-        UnicodeFileName = 1 << 11,
-    };
-    
-    MARK_AS_TYPED_ENUMFLAGS_FRIEND(BitFlag);
 
     struct ConstructorKey {};
 
@@ -373,12 +366,21 @@ public:
     ZipArchiveEntry& operator=(ZipArchiveEntry&& other) = delete;
     
     ZipArchiveEntry& operator=(const ZipArchiveEntry& other) = delete;
-
+    
+    enum class BitFlag : u16 {
+        None = 1 << 0,
+        Encrypted = 1 << 1,
+        DataDescriptor = 1 << 3,
+        UnicodeFileName = 1 << 11,
+    };
+    
+    MARK_AS_TYPED_ENUMFLAGS_FRIEND(BitFlag);
+    
 private:
     
-    const BitFlag& generalPurposeBitFlag() const noexcept;
+    BitFlag generalPurposeBitFlag() const noexcept;
     
-    BitFlag& generalPurposeBitFlag() noexcept;
+    BitFlagSetter<BitFlag> generalPurposeBitFlagRef() noexcept;
     
     void setGeneralPurposeBitFlag(BitFlag flag, bool set = true) noexcept;
     

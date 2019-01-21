@@ -365,16 +365,16 @@ void ZipArchiveEntry::remove() {
 
 // private getters & setters
 
-const ZipArchiveEntry::BitFlag& ZipArchiveEntry::generalPurposeBitFlag() const noexcept {
-    return reinterpret_cast<const BitFlag&>(fileHeader.central.generalPurposeBitFlag);
+ZipArchiveEntry::BitFlag ZipArchiveEntry::generalPurposeBitFlag() const noexcept {
+    return static_cast<BitFlag>(fileHeader.central.generalPurposeBitFlag);
 }
 
-ZipArchiveEntry::BitFlag& ZipArchiveEntry::generalPurposeBitFlag() noexcept {
-    return reinterpret_cast<BitFlag&>(fileHeader.central.generalPurposeBitFlag);
+BitFlagSetter<ZipArchiveEntry::BitFlag> ZipArchiveEntry::generalPurposeBitFlagRef() noexcept {
+    return BitFlagSetter<BitFlag>(fileHeader.central.generalPurposeBitFlag);
 }
 
 void ZipArchiveEntry::setGeneralPurposeBitFlag(BitFlag flag, bool set) noexcept {
-    auto& flags = generalPurposeBitFlag();
+    auto flags = generalPurposeBitFlagRef();
     if (set) {
         flags |= flag;
     } else {
@@ -547,7 +547,7 @@ void ZipArchiveEntry::internalCompressStream(std::istream& inputStream, std::ost
     
     std::unique_ptr<zip_cryptostream> cryptoStream;
     if (!_password.empty()) {
-        generalPurposeBitFlag() |= BitFlag::Encrypted;
+        generalPurposeBitFlagRef() |= BitFlag::Encrypted;
         
         cryptoStream = std::make_unique<zip_cryptostream>();
         
@@ -642,7 +642,7 @@ ZipArchiveEntry::ZipArchiveEntry(ConstructorKey key [[maybe_unused]],
     setLastWriteTime(time(nullptr));
     setFullName(fullPath);
     compressionMethod() = StoreMethod::CompressionMethod;
-    generalPurposeBitFlag() |= BitFlag::None;
+    generalPurposeBitFlagRef() |= BitFlag::None;
 }
 
 ZipArchiveEntry::ZipArchiveEntry(ConstructorKey key [[maybe_unused]],

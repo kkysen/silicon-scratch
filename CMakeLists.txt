@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CXX_LIBS /mnt/c/Users/Khyber/workspace/C++)
 
 include_directories(.)
-#include_directories(${CXX_LIBS}/ZipLib/source/)
+include_directories(${CXX_LIBS}/ZipLib/Source/)
 include_directories(${CXX_LIBS}/json/single_include/)
 include_directories(${CXX_LIBS}/llvm/llvm/include/)
 include_directories(${CXX_LIBS}/emsdk/emscripten/1.38.21/system/include/)
@@ -192,7 +192,10 @@ set(LIB_ZIP_FILES
         src/lib/zip/ZipArchiveEntry.h
         src/lib/zip/ZipFile.cpp
         src/lib/zip/ZipFile.h
-        src/lib/zip/utils/time_utils.cpp src/lib/zip/streams/Serializable.h src/lib/zip/utils/BitFlagSetter.h)
+        src/lib/zip/utils/time_utils.cpp
+        src/lib/zip/streams/Serializable.h
+        src/lib/zip/utils/BitFlagSetter.h
+        )
 
 set(LIB_FILES
         ${LIB_FS_FILES}
@@ -203,7 +206,7 @@ set(LIB_FILES
 set(MAIN_FILES
         src/main/core/main.cpp
         src/main/core/main.h
-        src/main/util/cast/iterators.h src/main/util/numbers.h src/main/util/strings.cpp src/main/util/strings.h src/main/util/MappedIterator.h src/main/util/SlicedIterable.h)
+        src/main/util/cast/iterators.h src/main/util/numbers.h src/main/util/strings.cpp src/main/util/strings.h src/main/util/MappedIterator.h src/main/util/SlicedIterable.h src/main/core/modifiedZipLib.cpp src/main/core/modifiedZipLib.h src/main/core/originalZipLib.cpp src/main/core/originalZipLib.h)
 
 set(SOURCE_FILES
         ${MAIN_FILES}

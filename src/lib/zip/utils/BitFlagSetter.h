@@ -17,23 +17,32 @@ public:
 private:
 
     IntType& raw;
+    
+    static IntType cast(BitFlag flag) noexcept {
+        return static_cast<IntType>(flag);
+    }
 
 public:
     
     explicit BitFlagSetter(IntType& raw = 0) : raw(raw) {}
     
-    BitFlagSetter& operator|=(BitFlag flag) {
-        raw |= static_cast<IntType>(flag);
+    BitFlagSetter& operator=(BitFlag flag) noexcept {
+        raw = cast(flag);
         return *this;
     }
     
-    BitFlagSetter& operator&=(BitFlag flag) {
-        raw &= static_cast<IntType>(flag);
+    BitFlagSetter& operator|=(BitFlag flag) noexcept {
+        raw |= cast(flag);
         return *this;
     }
     
-    BitFlagSetter& operator^=(BitFlag flag) {
-        raw ^= static_cast<IntType>(flag);
+    BitFlagSetter& operator&=(BitFlag flag) noexcept {
+        raw &= cast(flag);
+        return *this;
+    }
+    
+    BitFlagSetter& operator^=(BitFlag flag) noexcept {
+        raw ^= cast(flag);
         return *this;
     }
     

@@ -634,8 +634,8 @@ int ZEXPORT inflate(z_streamp strm, int flush) {
     ret = Z_OK;
     for (;;)
 //        printf("%d\n", state->mode);
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+//        #pragma GCC diagnostic push
+//        #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
         switch (state->mode) {
         case HEAD:
             if (state->wrap == 0) {
@@ -1220,7 +1220,7 @@ int ZEXPORT inflate(z_streamp strm, int flush) {
         default:
             return Z_STREAM_ERROR;
         }
-        #pragma GCC diagnostic push
+//        #pragma GCC diagnostic push
 
     /*
        Return from inflate(), updating the total counts and the check value.
